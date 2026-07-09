@@ -1,0 +1,129 @@
+﻿{
+  "name": "crm-airtable-trigger.json",
+  "type": "SHARED",
+  "summary": "",
+  "description": "",
+  "tags": [],
+  "blogUrl": "",
+  "metadata": {
+    "externalId": "7vaOziAMuTiLeNWLhGSdi"
+  },
+  "author": "Siddesh thapa",
+  "categories": [],
+  "pieces": [
+    "@activepieces/piece-airtable",
+    "@activepieces/piece-slack"
+  ],
+  "flows": [
+    {
+      "displayName": "crm-airtable-trigger.json",
+      "trigger": {
+        "name": "trigger",
+        "valid": true,
+        "displayName": "New Record",
+        "nextAction": {
+          "name": "step_1",
+          "skip": false,
+          "type": "PIECE",
+          "valid": true,
+          "settings": {
+            "input": {
+              "auth": "{{connections['wB4riTxIoOYAUkaEsfRce']}}",
+              "text": "🎯 *New Lead* — {{trigger['output']['fields']['Name']}}\n📧 {{trigger['output']['fields']['Email']}}\n🏢 {{trigger['output']['fields']['Company']}} | Source: {{trigger['output']['fields']['Source']}}\n👉 Check Airtable to assign and follow up",
+              "blocks": [],
+              "channel": "C0BFX7J46V7",
+              "sendAsBot": false,
+              "unfurlLinks": true,
+              "replyBroadcast": false,
+              "mentionOriginFlow": false
+            },
+            "pieceName": "@activepieces/piece-slack",
+            "actionName": "send_channel_message",
+            "sampleData": {},
+            "pieceVersion": "0.17.3",
+            "propertySettings": {
+              "file": {
+                "type": "MANUAL"
+              },
+              "info": {
+                "type": "MANUAL"
+              },
+              "text": {
+                "type": "MANUAL"
+              },
+              "blocks": {
+                "type": "MANUAL"
+              },
+              "channel": {
+                "type": "MANUAL"
+              },
+              "threadTs": {
+                "type": "MANUAL"
+              },
+              "username": {
+                "type": "MANUAL"
+              },
+              "iconEmoji": {
+                "type": "MANUAL"
+              },
+              "sendAsBot": {
+                "type": "MANUAL"
+              },
+              "unfurlLinks": {
+                "type": "MANUAL"
+              },
+              "profilePicture": {
+                "type": "MANUAL"
+              },
+              "replyBroadcast": {
+                "type": "MANUAL"
+              },
+              "mentionOriginFlow": {
+                "type": "MANUAL"
+              }
+            },
+            "errorHandlingOptions": {
+              "retryOnFailure": {
+                "value": false
+              },
+              "continueOnFailure": {
+                "value": false
+              }
+            }
+          },
+          "displayName": "Send Message To A Channel",
+          "lastUpdatedDate": "2026-07-09T09:10:23.865Z"
+        },
+        "lastUpdatedDate": "2026-07-09T09:10:23.864Z",
+        "type": "PIECE_TRIGGER",
+        "settings": {
+          "sampleData": {},
+          "propertySettings": {
+            "base": {
+              "type": "MANUAL"
+            },
+            "viewId": {
+              "type": "MANUAL"
+            },
+            "tableId": {
+              "type": "MANUAL"
+            }
+          },
+          "pieceName": "@activepieces/piece-airtable",
+          "pieceVersion": "0.6.10",
+          "triggerName": "new_record",
+          "input": {
+            "auth": "{{connections['WFZFYsM5xRAGkTlJ9ljau']}}",
+            "base": "appju97zngNteVlGV",
+            "viewId": null,
+            "tableId": "tblsrw7HAEdQTN3MI"
+          }
+        }
+      },
+      "valid": true,
+      "schemaVersion": "22",
+      "notes": []
+    }
+  ],
+  "status": "PUBLISHED"
+}
