@@ -1,0 +1,341 @@
+﻿{
+  "name": "crm-webhook-flow.json",
+  "type": "SHARED",
+  "summary": "",
+  "description": "",
+  "tags": [],
+  "blogUrl": "",
+  "metadata": {
+    "externalId": "ptFHkpkzEUF3yboqx7oUg"
+  },
+  "author": "Siddesh thapa",
+  "categories": [],
+  "pieces": [
+    "@activepieces/piece-webhook",
+    "@activepieces/piece-slack",
+    "@activepieces/piece-flow-helper",
+    "@activepieces/piece-airtable"
+  ],
+  "flows": [
+    {
+      "displayName": "crm-webhook-flow.json",
+      "trigger": {
+        "name": "trigger",
+        "valid": true,
+        "displayName": "Catch Webhook",
+        "nextAction": {
+          "name": "step_2",
+          "skip": false,
+          "type": "ROUTER",
+          "valid": true,
+          "children": [
+            {
+              "name": "step_3",
+              "skip": false,
+              "type": "PIECE",
+              "valid": true,
+              "settings": {
+                "input": {
+                  "auth": "{{connections['wB4riTxIoOYAUkaEsfRce']}}",
+                  "text": "⚠️ Lead rejected — missing email{{trigger['output']['fields']}}",
+                  "blocks": [],
+                  "channel": "C0BFX7KJAC9",
+                  "sendAsBot": false,
+                  "unfurlLinks": true,
+                  "replyBroadcast": false,
+                  "mentionOriginFlow": false
+                },
+                "pieceName": "@activepieces/piece-slack",
+                "actionName": "send_channel_message",
+                "sampleData": {},
+                "pieceVersion": "0.17.3",
+                "propertySettings": {
+                  "file": {
+                    "type": "MANUAL"
+                  },
+                  "info": {
+                    "type": "MANUAL"
+                  },
+                  "text": {
+                    "type": "MANUAL"
+                  },
+                  "blocks": {
+                    "type": "MANUAL"
+                  },
+                  "channel": {
+                    "type": "MANUAL"
+                  },
+                  "threadTs": {
+                    "type": "MANUAL"
+                  },
+                  "username": {
+                    "type": "MANUAL"
+                  },
+                  "iconEmoji": {
+                    "type": "MANUAL"
+                  },
+                  "sendAsBot": {
+                    "type": "MANUAL"
+                  },
+                  "unfurlLinks": {
+                    "type": "MANUAL"
+                  },
+                  "profilePicture": {
+                    "type": "MANUAL"
+                  },
+                  "replyBroadcast": {
+                    "type": "MANUAL"
+                  },
+                  "mentionOriginFlow": {
+                    "type": "MANUAL"
+                  }
+                },
+                "errorHandlingOptions": {
+                  "retryOnFailure": {
+                    "value": false
+                  },
+                  "continueOnFailure": {
+                    "value": false
+                  }
+                }
+              },
+              "nextAction": {
+                "name": "step_4",
+                "skip": false,
+                "type": "PIECE",
+                "valid": true,
+                "settings": {
+                  "input": {},
+                  "pieceName": "@activepieces/piece-flow-helper",
+                  "actionName": "stopFlow",
+                  "sampleData": {},
+                  "pieceVersion": "0.1.4",
+                  "propertySettings": {},
+                  "errorHandlingOptions": {
+                    "retryOnFailure": {
+                      "value": false
+                    },
+                    "continueOnFailure": {
+                      "value": false
+                    }
+                  }
+                },
+                "displayName": "Stop Flow",
+                "lastUpdatedDate": "2026-07-09T09:10:01.911Z"
+              },
+              "displayName": "Send Message To A Channel",
+              "lastUpdatedDate": "2026-07-09T09:10:01.911Z"
+            },
+            {
+              "name": "step_5",
+              "skip": false,
+              "type": "PIECE",
+              "valid": true,
+              "settings": {
+                "input": {
+                  "auth": "{{connections['WFZFYsM5xRAGkTlJ9ljau']}}",
+                  "base": "appju97zngNteVlGV",
+                  "fields": {
+                    "fldKkFXegk5IhNyaH": "{{trigger['output']['body']['name']}}",
+                    "fldT94uXEnuc7dW3H": "{{trigger['output']['body']['source']}}",
+                    "fldTSeSkm4wISTbBa": "{{trigger['output']['body']['email']}}",
+                    "fldXNnOKcpfEqM2ZO": "New",
+                    "fldhPCOT7TCPtTlhQ": "{{trigger['output']['body']['company']}}"
+                  },
+                  "tableId": "tblsrw7HAEdQTN3MI"
+                },
+                "pieceName": "@activepieces/piece-airtable",
+                "actionName": "airtable_create_record",
+                "sampleData": {},
+                "pieceVersion": "0.6.10",
+                "propertySettings": {
+                  "base": {
+                    "type": "MANUAL"
+                  },
+                  "fields": {
+                    "type": "MANUAL",
+                    "schema": {
+                      "fldKkFXegk5IhNyaH": {
+                        "type": "SHORT_TEXT",
+                        "required": false,
+                        "displayName": "Name"
+                      },
+                      "fldT94uXEnuc7dW3H": {
+                        "type": "SHORT_TEXT",
+                        "required": false,
+                        "displayName": "Source"
+                      },
+                      "fldTSeSkm4wISTbBa": {
+                        "type": "SHORT_TEXT",
+                        "required": false,
+                        "displayName": "Email"
+                      },
+                      "fldXNnOKcpfEqM2ZO": {
+                        "type": "SHORT_TEXT",
+                        "required": false,
+                        "displayName": "Status"
+                      },
+                      "fldhPCOT7TCPtTlhQ": {
+                        "type": "SHORT_TEXT",
+                        "required": false,
+                        "displayName": "Company"
+                      },
+                      "fldtBtfyCEKsVt91i": {
+                        "type": "SHORT_TEXT",
+                        "required": false,
+                        "displayName": "Interactions"
+                      }
+                    }
+                  },
+                  "tableId": {
+                    "type": "MANUAL"
+                  }
+                },
+                "errorHandlingOptions": {
+                  "retryOnFailure": {
+                    "value": false
+                  },
+                  "continueOnFailure": {
+                    "value": false
+                  }
+                }
+              },
+              "nextAction": {
+                "name": "step_6",
+                "skip": false,
+                "type": "PIECE",
+                "valid": true,
+                "settings": {
+                  "input": {
+                    "auth": "{{connections['wB4riTxIoOYAUkaEsfRce']}}",
+                    "text": "🎯 *New Lead* — {{trigger['output']['body']['name']}}\n📧 {{trigger['output']['body']['email']}}\n🏢 {{trigger['output']['body']['company']}}{{trigger['output']['body']['source']}}\n👉 Check Airtable to assign and follow up",
+                    "blocks": [],
+                    "channel": "C0BFX7J46V7",
+                    "sendAsBot": false,
+                    "unfurlLinks": true,
+                    "replyBroadcast": false,
+                    "mentionOriginFlow": false
+                  },
+                  "pieceName": "@activepieces/piece-slack",
+                  "actionName": "send_channel_message",
+                  "sampleData": {},
+                  "pieceVersion": "0.17.3",
+                  "propertySettings": {
+                    "file": {
+                      "type": "MANUAL"
+                    },
+                    "info": {
+                      "type": "MANUAL"
+                    },
+                    "text": {
+                      "type": "MANUAL"
+                    },
+                    "blocks": {
+                      "type": "MANUAL"
+                    },
+                    "channel": {
+                      "type": "MANUAL"
+                    },
+                    "threadTs": {
+                      "type": "MANUAL"
+                    },
+                    "username": {
+                      "type": "MANUAL"
+                    },
+                    "iconEmoji": {
+                      "type": "MANUAL"
+                    },
+                    "sendAsBot": {
+                      "type": "MANUAL"
+                    },
+                    "unfurlLinks": {
+                      "type": "MANUAL"
+                    },
+                    "profilePicture": {
+                      "type": "MANUAL"
+                    },
+                    "replyBroadcast": {
+                      "type": "MANUAL"
+                    },
+                    "mentionOriginFlow": {
+                      "type": "MANUAL"
+                    }
+                  },
+                  "errorHandlingOptions": {
+                    "retryOnFailure": {
+                      "value": false
+                    },
+                    "continueOnFailure": {
+                      "value": false
+                    }
+                  }
+                },
+                "displayName": "Send Message To A Channel",
+                "lastUpdatedDate": "2026-07-09T09:10:01.911Z"
+              },
+              "displayName": "Create Airtable Record",
+              "lastUpdatedDate": "2026-07-09T09:10:01.911Z"
+            }
+          ],
+          "settings": {
+            "branches": [
+              {
+                "branchName": "Email Empty",
+                "branchType": "CONDITION",
+                "conditions": [
+                  [
+                    {
+                      "operator": "LIST_IS_EMPTY",
+                      "firstValue": "{{trigger['output']['body']['email']}}"
+                    }
+                  ]
+                ]
+              },
+              {
+                "branchName": "Otherwise",
+                "branchType": "FALLBACK"
+              }
+            ],
+            "executionType": "EXECUTE_FIRST_MATCH"
+          },
+          "displayName": "Router",
+          "lastUpdatedDate": "2026-07-09T09:10:01.910Z"
+        },
+        "lastUpdatedDate": "2026-07-09T09:10:01.909Z",
+        "type": "PIECE_TRIGGER",
+        "settings": {
+          "sampleData": {},
+          "propertySettings": {
+            "authType": {
+              "type": "MANUAL"
+            },
+            "authFields": {
+              "type": "MANUAL",
+              "schema": {}
+            },
+            "liveMarkdown": {
+              "type": "MANUAL"
+            },
+            "syncMarkdown": {
+              "type": "MANUAL"
+            },
+            "testMarkdown": {
+              "type": "MANUAL"
+            }
+          },
+          "pieceName": "@activepieces/piece-webhook",
+          "pieceVersion": "0.1.36",
+          "triggerName": "catch_webhook",
+          "input": {
+            "authType": "none",
+            "authFields": {}
+          }
+        }
+      },
+      "valid": true,
+      "schemaVersion": "22",
+      "notes": []
+    }
+  ],
+  "status": "PUBLISHED"
+}
