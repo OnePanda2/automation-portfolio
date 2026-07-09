@@ -1,0 +1,135 @@
+﻿{
+  "name": "Unit 2.9",
+  "type": "SHARED",
+  "summary": "",
+  "description": "",
+  "tags": [],
+  "blogUrl": "",
+  "metadata": {
+    "externalId": "23kjrEc4AUVyQ40uVMJbW"
+  },
+  "author": "Siddesh thapa",
+  "categories": [],
+  "pieces": [
+    "@activepieces/piece-webhook",
+    "@activepieces/piece-gmail"
+  ],
+  "flows": [
+    {
+      "displayName": "Unit 2.9",
+      "trigger": {
+        "name": "trigger",
+        "valid": true,
+        "displayName": "Catch Webhook",
+        "nextAction": {
+          "name": "step_1",
+          "skip": false,
+          "type": "PIECE",
+          "valid": true,
+          "settings": {
+            "input": {
+              "cc": [],
+              "bcc": [],
+              "auth": "{{connections['WSAdIV90v9bSuTyI0X59d']}}",
+              "body": "Hi {{trigger['output']['body']['name']}},\nWelcome! You're now on the {{trigger['output']['body']['plan']}} plan.\nHere's what happens next:\n1. Your account will be set up within 24 hours\n2. A setup guide arrives tomorrow\n3. Your account manager will reach out within 2 business days\nLooking forward to working with you.",
+              "draft": false,
+              "subject": "Welcome aboard, {{trigger['output']['body']['name']}}",
+              "receiver": [
+                "{{trigger['output']['body']['email']}}"
+              ],
+              "reply_to": [],
+              "body_type": "plain_text",
+              "attachments": []
+            },
+            "pieceName": "@activepieces/piece-gmail",
+            "actionName": "send_email",
+            "sampleData": {},
+            "pieceVersion": "0.12.7",
+            "propertySettings": {
+              "cc": {
+                "type": "MANUAL"
+              },
+              "bcc": {
+                "type": "MANUAL"
+              },
+              "body": {
+                "type": "MANUAL"
+              },
+              "from": {
+                "type": "MANUAL"
+              },
+              "draft": {
+                "type": "MANUAL"
+              },
+              "subject": {
+                "type": "MANUAL"
+              },
+              "receiver": {
+                "type": "MANUAL"
+              },
+              "reply_to": {
+                "type": "MANUAL"
+              },
+              "body_type": {
+                "type": "MANUAL"
+              },
+              "attachments": {
+                "type": "MANUAL"
+              },
+              "in_reply_to": {
+                "type": "MANUAL"
+              },
+              "sender_name": {
+                "type": "MANUAL"
+              }
+            },
+            "errorHandlingOptions": {
+              "retryOnFailure": {
+                "value": false
+              },
+              "continueOnFailure": {
+                "value": false
+              }
+            }
+          },
+          "displayName": "Send Email",
+          "lastUpdatedDate": "2026-07-09T11:43:31.459Z"
+        },
+        "lastUpdatedDate": "2026-07-09T11:41:27.584Z",
+        "type": "PIECE_TRIGGER",
+        "settings": {
+          "sampleData": {},
+          "propertySettings": {
+            "authType": {
+              "type": "MANUAL"
+            },
+            "authFields": {
+              "type": "MANUAL",
+              "schema": {}
+            },
+            "liveMarkdown": {
+              "type": "MANUAL"
+            },
+            "syncMarkdown": {
+              "type": "MANUAL"
+            },
+            "testMarkdown": {
+              "type": "MANUAL"
+            }
+          },
+          "pieceName": "@activepieces/piece-webhook",
+          "pieceVersion": "0.1.36",
+          "triggerName": "catch_webhook",
+          "input": {
+            "authType": "none",
+            "authFields": {}
+          }
+        }
+      },
+      "valid": true,
+      "schemaVersion": "22",
+      "notes": []
+    }
+  ],
+  "status": "PUBLISHED"
+}
