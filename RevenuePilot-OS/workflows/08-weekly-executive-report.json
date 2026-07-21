@@ -1,0 +1,195 @@
+﻿{
+  "name": "08. Weekly Executive Report",
+  "type": "SHARED",
+  "summary": "",
+  "description": "",
+  "tags": [],
+  "blogUrl": "",
+  "metadata": {
+    "externalId": "H79tQ2bS9luJT5RKOkBAe"
+  },
+  "author": "Siddesh thapa",
+  "categories": [],
+  "pieces": [
+    "@activepieces/piece-schedule",
+    "@activepieces/piece-airtable",
+    "@activepieces/piece-slack"
+  ],
+  "flows": [
+    {
+      "displayName": "08. Weekly Executive Report",
+      "trigger": {
+        "name": "trigger",
+        "valid": true,
+        "displayName": "every_week",
+        "nextAction": {
+          "name": "step_1",
+          "type": "PIECE",
+          "valid": true,
+          "settings": {
+            "input": {
+              "url": {
+                "url": "/appmDDdJrwOMI9X4m/tblQp36EpW9TJSfvt"
+              },
+              "auth": "{{connections['ebIpUp8C8ZOY22rHmCNDv']}}",
+              "method": "GET",
+              "headers": {},
+              "body_type": "none",
+              "queryParams": {}
+            },
+            "pieceName": "@activepieces/piece-airtable",
+            "actionName": "custom_api_call",
+            "pieceVersion": "0.6.10",
+            "propertySettings": {},
+            "errorHandlingOptions": {
+              "retryOnFailure": {
+                "value": false
+              },
+              "continueOnFailure": {
+                "value": false
+              }
+            }
+          },
+          "nextAction": {
+            "name": "step_2",
+            "type": "CODE",
+            "valid": true,
+            "settings": {
+              "input": {
+                "leadsResponse": "{{step_1['output']}}"
+              },
+              "sourceCode": {
+                "code": "// Adapted from repo's Postgres report-query.sql. No Postgres — computed here\n// from a single-page Airtable fetch (NOTE: only reads the first 100 Leads\n// records; a real production version would need pagination via `offset`).\n// Also: our schema has no separate 'closed_at' for won/lost deals, so this\n// buckets everything by the lead's Created At, not deal-close date like the\n// original SQL did — a deliberate simplification given the data available.\n\nfunction getWeekBounds() {\n  const now = new Date();\n  const dayOfWeek = now.getUTCDay(); // 0=Sun..6=Sat\n  const daysSinceMonday = (dayOfWeek + 6) % 7;\n  const thisMonday = new Date(now);\n  thisMonday.setUTCDate(now.getUTCDate() - daysSinceMonday);\n  thisMonday.setUTCHours(0, 0, 0, 0);\n\n  const lastMonday = new Date(thisMonday);\n  lastMonday.setUTCDate(thisMonday.getUTCDate() - 7);\n\n  const lastSunday = new Date(thisMonday);\n  lastSunday.setUTCDate(thisMonday.getUTCDate() - 1);\n  lastSunday.setUTCHours(23, 59, 59, 999);\n\n  return { weekStart: lastMonday, weekEnd: lastSunday };\n}\n\nconst MQL_STATUSES = ['Scored', 'Routed', 'Notified', 'Customer'];\nconst SQL_STATUSES = ['Routed', 'Notified', 'Customer'];\n\nexport const code = async (inputs) => {\n  const records = inputs.leadsResponse?.body?.records || [];\n  const { weekStart, weekEnd } = getWeekBounds();\n\n  const weekRecords = records.filter(r => {\n    const createdAt = r.fields['Created At'];\n    if (!createdAt) return false;\n    const d = new Date(createdAt);\n    return d >= weekStart && d <= weekEnd;\n  });\n\n  const leadsCount = weekRecords.length;\n  const mqlsCount = weekRecords.filter(r => MQL_STATUSES.includes(r.fields.Status)).length;\n  const sqlsCount = weekRecords.filter(r => SQL_STATUSES.includes(r.fields.Status)).length;\n  const conversionRate = leadsCount === 0 ? 0 : Math.round((sqlsCount / leadsCount) * 10000) / 100;\n  const revenue = weekRecords\n    .filter(r => r.fields.Status === 'Customer')\n    .reduce((sum, r) => sum + (Number(r.fields['Deal Value']) || 0), 0);\n  const lostDeals = weekRecords.filter(r => r.fields.Status === 'Closed Lost').length;\n\n  return {\n    metrics: {\n      week_start: weekStart.toISOString().slice(0, 10),\n      week_end: weekEnd.toISOString().slice(0, 10),\n      leads_count: leadsCount,\n      mqls_count: mqlsCount,\n      sqls_count: sqlsCount,\n      conversion_rate: conversionRate,\n      revenue,\n      lost_deals: lostDeals,\n    },\n  };\n};",
+                "packageJson": "{}"
+              },
+              "errorHandlingOptions": {
+                "retryOnFailure": {
+                  "value": false
+                },
+                "continueOnFailure": {
+                  "value": false
+                }
+              }
+            },
+            "nextAction": {
+              "name": "step_3",
+              "type": "CODE",
+              "valid": true,
+              "settings": {
+                "input": {
+                  "metrics": "{{step_2['output'].metrics}}",
+                  "sourceCode": "function buildSummaryPrompt(metrics) {\n  return `You are writing a one-paragraph executive summary for a startup's weekly revenue report.\nBe direct and specific. Do not invent numbers not given below.\n\nWeek: ${metrics.week_start} to ${metrics.week_end}\nLeads: ${metrics.leads_count}\nMQLs: ${metrics.mqls_count}\nSQLs: ${metrics.sqls_count}\nConversion rate: ${metrics.conversion_rate}%\nRevenue closed: $${metrics.revenue}\nLost deals: ${metrics.lost_deals}\n\nWrite 3-4 sentences a founder would actually want to read.`;\n}\n\nasync function callOpenAiForSummary(metrics, apiKey) {\n  const response = await fetch('https://api.openai.com/v1/chat/completions', {\n    method: 'POST',\n    headers: {\n      'Content-Type': 'application/json',\n      Authorization: `Bearer ${apiKey}`,\n    },\n    body: JSON.stringify({\n      model: 'gpt-4o-mini',\n      messages: [\n        { role: 'system', content: 'You write concise, factual executive summaries. Never invent numbers.' },\n        { role: 'user', content: buildSummaryPrompt(metrics) },\n      ],\n      temperature: 0.4,\n    }),\n  });\n\n  if (!response.ok) throw new Error(`OpenAI summary request failed: ${response.status}`);\n  const data = await response.json();\n  return data.choices?.[0]?.message?.content?.trim() ?? '';\n}\n\nexport const code = async (inputs) => {\n  const { metrics } = inputs;\n\n  let aiSummary;\n  try {\n    aiSummary = await callOpenAiForSummary(metrics, inputs.openaiApiKey);\n  } catch (err) {\n    // Expected until a real OpenAI key is wired in.\n    aiSummary = `(AI summary unavailable: ${err.message}. Raw metrics below.)`;\n  }\n\n  const slackMessage =\n    `*📊 Weekly Revenue Report (${metrics.week_start} → ${metrics.week_end})*\\n\\n` +\n    `${aiSummary}\\n\\n` +\n    `• Leads: ${metrics.leads_count}\\n` +\n    `• MQLs: ${metrics.mqls_count}\\n` +\n    `• SQLs: ${metrics.sqls_count}\\n` +\n    `• Conversion: ${metrics.conversion_rate}%\\n` +\n    `• Revenue: $${metrics.revenue}\\n` +\n    `• Lost deals: ${metrics.lost_deals}`;\n\n  return { metrics, aiSummary, slackMessage, createdAtIso: new Date().toISOString() };\n};",
+                  "openaiApiKey": "YOUR_OPENAI_API_KEY_HERE"
+                },
+                "sourceCode": {
+                  "code": "function buildSummaryPrompt(metrics) {\n  return `You are writing a one-paragraph executive summary for a startup's weekly revenue report.\nBe direct and specific. Do not invent numbers not given below.\n\nWeek: ${metrics.week_start} to ${metrics.week_end}\nLeads: ${metrics.leads_count}\nMQLs: ${metrics.mqls_count}\nSQLs: ${metrics.sqls_count}\nConversion rate: ${metrics.conversion_rate}%\nRevenue closed: $${metrics.revenue}\nLost deals: ${metrics.lost_deals}\n\nWrite 3-4 sentences a founder would actually want to read.`;\n}\n\nasync function callOpenAiForSummary(metrics, apiKey) {\n  const response = await fetch('https://api.openai.com/v1/chat/completions', {\n    method: 'POST',\n    headers: {\n      'Content-Type': 'application/json',\n      Authorization: `Bearer ${apiKey}`,\n    },\n    body: JSON.stringify({\n      model: 'gpt-4o-mini',\n      messages: [\n        { role: 'system', content: 'You write concise, factual executive summaries. Never invent numbers.' },\n        { role: 'user', content: buildSummaryPrompt(metrics) },\n      ],\n      temperature: 0.4,\n    }),\n  });\n\n  if (!response.ok) throw new Error(`OpenAI summary request failed: ${response.status}`);\n  const data = await response.json();\n  return data.choices?.[0]?.message?.content?.trim() ?? '';\n}\n\nexport const code = async (inputs) => {\n  const { metrics } = inputs;\n\n  let aiSummary;\n  try {\n    aiSummary = await callOpenAiForSummary(metrics, inputs.openaiApiKey);\n  } catch (err) {\n    // Expected until a real OpenAI key is wired in.\n    aiSummary = `(AI summary unavailable: ${err.message}. Raw metrics below.)`;\n  }\n\n  const slackMessage =\n    `*📊 Weekly Revenue Report (${metrics.week_start} → ${metrics.week_end})*\\n\\n` +\n    `${aiSummary}\\n\\n` +\n    `• Leads: ${metrics.leads_count}\\n` +\n    `• MQLs: ${metrics.mqls_count}\\n` +\n    `• SQLs: ${metrics.sqls_count}\\n` +\n    `• Conversion: ${metrics.conversion_rate}%\\n` +\n    `• Revenue: $${metrics.revenue}\\n` +\n    `• Lost deals: ${metrics.lost_deals}`;\n\n  return { metrics, aiSummary, slackMessage, createdAtIso: new Date().toISOString() };\n};",
+                  "packageJson": "{}"
+                },
+                "errorHandlingOptions": {
+                  "retryOnFailure": {
+                    "value": false
+                  },
+                  "continueOnFailure": {
+                    "value": false
+                  }
+                }
+              },
+              "nextAction": {
+                "name": "step_4",
+                "type": "PIECE",
+                "valid": true,
+                "settings": {
+                  "input": {
+                    "auth": "{{connections['ebIpUp8C8ZOY22rHmCNDv']}}",
+                    "base": "appI9DZRmXJeTdd6V",
+                    "fields": {
+                      "fld9MuCLjtsT87lgn": "{{step_3['output'].metrics.week_start}}",
+                      "fldBaKsPL1cE3rwMZ": "{{step_3['output'].metrics.conversion_rate}}",
+                      "fldEnmzXB5EjNDIY3": "{{step_3['output'].metrics.lost_deals}}",
+                      "fldOKSdFe4CowrDYh": "{{step_3['output'].metrics.revenue}}",
+                      "fldQSuNu2X9XKn2aW": "{{step_3['output'].createdAtIso}}",
+                      "fldTBrtVgLZVmJTEt": "{{step_3['output'].aiSummary}}",
+                      "fldWqZEHCfEHH7pCz": "{{step_3['output'].metrics.week_end}}",
+                      "fldYQXP18nnnz7yxD": "{{step_3['output'].metrics.leads_count}}",
+                      "fldfodyWVH5BoJJ3X": "{{step_3['output'].metrics.sqls_count}}",
+                      "fldk2W2Ymylb7N16H": "{{step_3['output'].metrics.mqls_count}}"
+                    },
+                    "tableId": "tbl1iU5gcsPVovo3J"
+                  },
+                  "pieceName": "@activepieces/piece-airtable",
+                  "actionName": "airtable_create_record",
+                  "pieceVersion": "0.6.10",
+                  "propertySettings": {},
+                  "errorHandlingOptions": {
+                    "retryOnFailure": {
+                      "value": false
+                    },
+                    "continueOnFailure": {
+                      "value": false
+                    }
+                  }
+                },
+                "nextAction": {
+                  "name": "step_5",
+                  "type": "PIECE",
+                  "valid": true,
+                  "settings": {
+                    "input": {
+                      "auth": "{{connections['P5rLyWzV29TV94zcu6omH']}}",
+                      "text": "{{step_3['output'].slackMessage}}",
+                      "channel": "C0BFX7KJAC9",
+                      "sendAsBot": true,
+                      "unfurlLinks": true,
+                      "replyBroadcast": false,
+                      "mentionOriginFlow": false
+                    },
+                    "pieceName": "@activepieces/piece-slack",
+                    "actionName": "send_channel_message",
+                    "pieceVersion": "0.17.3",
+                    "propertySettings": {},
+                    "errorHandlingOptions": {
+                      "retryOnFailure": {
+                        "value": false
+                      },
+                      "continueOnFailure": {
+                        "value": false
+                      }
+                    }
+                  },
+                  "displayName": "Post report to #automations (founders-highlights mapping)",
+                  "lastUpdatedDate": "2026-07-19T13:32:34.905Z"
+                },
+                "displayName": "Archive report row",
+                "lastUpdatedDate": "2026-07-20T07:32:52.212Z"
+              },
+              "displayName": "Get AI exec summary + build Slack message (PLACEHOLDER key)",
+              "lastUpdatedDate": "2026-07-20T07:30:51.222Z"
+            },
+            "displayName": "Compute weekly metrics from Airtable leads",
+            "lastUpdatedDate": "2026-07-19T13:32:18.447Z"
+          },
+          "displayName": "Fetch all leads (single page, up to 100)",
+          "lastUpdatedDate": "2026-07-19T13:32:18.330Z"
+        },
+        "lastUpdatedDate": "2026-07-19T13:32:18.155Z",
+        "type": "PIECE_TRIGGER",
+        "settings": {
+          "sampleData": {},
+          "propertySettings": {},
+          "pieceName": "@activepieces/piece-schedule",
+          "pieceVersion": "0.1.18",
+          "triggerName": "every_week",
+          "input": {
+            "timezone": "Asia/Kolkata",
+            "day_of_the_week": 1,
+            "hour_of_the_day": 8
+          }
+        }
+      },
+      "valid": true,
+      "schemaVersion": "22",
+      "notes": []
+    }
+  ],
+  "status": "PUBLISHED"
+}

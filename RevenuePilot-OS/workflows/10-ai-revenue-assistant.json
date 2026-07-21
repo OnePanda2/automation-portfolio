@@ -1,0 +1,357 @@
+﻿{
+  "name": "10. AI Revenue Assistant",
+  "type": "SHARED",
+  "summary": "",
+  "description": "",
+  "tags": [],
+  "blogUrl": "",
+  "metadata": {
+    "externalId": "3VpzAvgaAe7kkaF5dmJlg"
+  },
+  "author": "Siddesh thapa",
+  "categories": [],
+  "pieces": [
+    "@activepieces/piece-webhook",
+    "@activepieces/piece-airtable"
+  ],
+  "flows": [
+    {
+      "displayName": "10. AI Revenue Assistant",
+      "trigger": {
+        "name": "trigger",
+        "valid": true,
+        "displayName": "catch_webhook",
+        "nextAction": {
+          "name": "step_1",
+          "type": "CODE",
+          "valid": true,
+          "settings": {
+            "input": {
+              "question": "{{trigger['output'].body.question}}"
+            },
+            "sourceCode": {
+              "code": "function validateQuery(parsed) {\n  const ALLOWED_TABLES = ['Leads', 'Reports'];\n  if (!parsed || typeof parsed !== 'object') return 'Generated query is not a valid object.';\n  if (!ALLOWED_TABLES.includes(parsed.table)) return 'Generated query references a disallowed table.';\n  if (parsed.filterByFormula && typeof parsed.filterByFormula !== 'string') return 'filterByFormula must be a string.';\n  const forbidden = ['failures', 'delete(', 'update(', 'insert(', 'drop('];\n  const lower = (parsed.filterByFormula || '').toLowerCase();\n  if (forbidden.some((k) => lower.includes(k))) return 'Generated query contains a disallowed operation.';\n  if (parsed.maxRecords !== undefined && (typeof parsed.maxRecords !== 'number' || parsed.maxRecords <= 0)) return 'maxRecords must be a positive number.';\n  return null;\n}\n\nexport const code = async (inputs) => {\n  const question = inputs.question || '';\n  const apiKey = 'YOUR_OPENAI_API_KEY_HERE';\n\n  const SCHEMA_CONTEXT = `\nTables you may query (read-only), Airtable REST semantics — no joins, no SQL:\n\nLeads (fields): Email, Full Name, Company, Phone, Source, Created At, Duplicate, Lead Score,\n  ICP Tier, Industry, Company Size, Country, Territory, Assigned Rep, AI Reasoning,\n  Priority, Deal Value, Assigned CSM, Onboarding Completed At, Status\n\nReports (fields): Week Start, Week End, Leads Count, MQLs Count, SQLs Count,\n  Conversion Rate, Revenue, Lost Deals, AI Summary, Created At\n\nRules:\n- Only ever query one table: Leads or Reports.\n- Return ONLY JSON, no markdown fences, no explanation:\n  {\"table\": \"Leads\"|\"Reports\", \"filterByFormula\": \"<Airtable formula string, or empty string for no filter>\", \"maxRecords\": <integer, max 200>}\n`;\n\n  let raw;\n  try {\n    const response = await fetch('https://api.openai.com/v1/chat/completions', {\n      method: 'POST',\n      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },\n      body: JSON.stringify({\n        model: 'gpt-4o-mini',\n        messages: [\n          { role: 'system', content: `You translate questions into Airtable read queries.\\n${SCHEMA_CONTEXT}` },\n          { role: 'user', content: question },\n        ],\n        temperature: 0.1,\n      }),\n    });\n    if (!response.ok) {\n      const err = new Error(`OpenAI request failed: ${response.status}`);\n      err.status = response.status;\n      throw err;\n    }\n    const data = await response.json();\n    raw = data.choices?.[0]?.message?.content?.trim() ?? '';\n  } catch (err) {\n    return { parsedQuery: null, rejected: true, rejectionReason: `AI provider unavailable (${err.message})` };\n  }\n\n  const cleaned = raw.replace(/```json|```/g, '').trim();\n  let parsed;\n  try {\n    parsed = JSON.parse(cleaned);\n  } catch (e) {\n    return { parsedQuery: null, rejected: true, rejectionReason: 'Model did not return valid JSON.' };\n  }\n\n  const rejection = validateQuery(parsed);\n  if (rejection) {\n    return { parsedQuery: null, rejected: true, rejectionReason: rejection };\n  }\n\n  return {\n    parsedQuery: {\n      table: parsed.table,\n      filterByFormula: parsed.filterByFormula || '',\n      maxRecords: Math.min(parsed.maxRecords || 50, 200),\n    },\n    rejected: false,\n    rejectionReason: null,\n  };\n};",
+              "packageJson": "{}"
+            },
+            "errorHandlingOptions": {
+              "retryOnFailure": {
+                "value": false
+              },
+              "continueOnFailure": {
+                "value": false
+              }
+            }
+          },
+          "nextAction": {
+            "name": "step_2",
+            "type": "ROUTER",
+            "valid": true,
+            "children": [
+              {
+                "name": "step_10",
+                "type": "PIECE",
+                "valid": true,
+                "settings": {
+                  "input": {
+                    "fields": {
+                      "body": {
+                        "answer": null,
+                        "reason": "{{step_1['output'].rejectionReason}}",
+                        "question": "{{trigger['output'].body.question}}",
+                        "rejected": true
+                      },
+                      "status": 200
+                    },
+                    "responseType": "json"
+                  },
+                  "pieceName": "@activepieces/piece-webhook",
+                  "actionName": "return_response",
+                  "pieceVersion": "0.1.36",
+                  "propertySettings": {},
+                  "errorHandlingOptions": {
+                    "retryOnFailure": {
+                      "value": false
+                    },
+                    "continueOnFailure": {
+                      "value": false
+                    }
+                  }
+                },
+                "displayName": "Reply (Rejected)",
+                "lastUpdatedDate": "2026-07-20T12:34:41.842Z"
+              },
+              {
+                "name": "step_3",
+                "type": "ROUTER",
+                "valid": true,
+                "children": [
+                  {
+                    "name": "step_4",
+                    "type": "PIECE",
+                    "valid": true,
+                    "settings": {
+                      "input": {
+                        "url": {
+                          "url": "/appmDDdJrwOMI9X4m/tblQp36EpW9TJSfvt"
+                        },
+                        "auth": "{{connections['ebIpUp8C8ZOY22rHmCNDv']}}",
+                        "body": {},
+                        "method": "GET",
+                        "headers": {},
+                        "failsafe": false,
+                        "body_type": "none",
+                        "queryParams": {
+                          "maxRecords": "{{step_1['output'].parsedQuery.maxRecords}}",
+                          "filterByFormula": "{{step_1['output'].parsedQuery.filterByFormula}}"
+                        },
+                        "followRedirects": false,
+                        "response_is_binary": false
+                      },
+                      "pieceName": "@activepieces/piece-airtable",
+                      "actionName": "custom_api_call",
+                      "pieceVersion": "0.6.10",
+                      "propertySettings": {},
+                      "errorHandlingOptions": {
+                        "retryOnFailure": {
+                          "value": false
+                        },
+                        "continueOnFailure": {
+                          "value": false
+                        }
+                      }
+                    },
+                    "nextAction": {
+                      "name": "step_6",
+                      "type": "CODE",
+                      "valid": true,
+                      "settings": {
+                        "input": {
+                          "question": "{{trigger['output'].body.question}}",
+                          "resultBody": "{{step_4['output'].body}}"
+                        },
+                        "sourceCode": {
+                          "code": "export const code = async (inputs) => {\\n  const apiKey = 'YOUR_OPENAI_API_KEY_HERE';\\n  const question = inputs.question || '';\\n  let records = [];\\n  try {\\n    const parsed = typeof inputs.resultBody === 'string' ? JSON.parse(inputs.resultBody) : inputs.resultBody;\\n    records = parsed?.records || [];\\n  } catch (e) {\\n    records = [];\\n  }\\n\\n  if (!records.length) {\\n    return { answer: \\\"I ran the query but got no matching results \\u2014 try rephrasing or widening the timeframe.\\\" };\\n  }\\n\\n  const rows = records.map((r) => r.fields);\\n\\n  try {\\n    const response = await fetch('https://api.openai.com/v1/chat/completions', {\\n      method: 'POST',\\n      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },\\n      body: JSON.stringify({\\n        model: 'gpt-4o-mini',\\n        messages: [\\n          { role: 'system', content: 'You explain query results in one short, plain-English paragraph. Only use the data given, never invent numbers.' },\\n          { role: 'user', content: `Question: ${question}\\\\n\\\\nResult rows (JSON): ${JSON.stringify(rows).slice(0, 4000)}` },\\n        ],\\n        temperature: 0.1,\\n      }),\\n    });\\n    if (!response.ok) {\\n      const err = new Error(`OpenAI request failed: ${response.status}`);\\n      err.status = response.status;\\n      throw err;\\n    }\\n    const data = await response.json();\\n    const answer = data.choices?.[0]?.message?.content?.trim() ?? '';\\n    return { answer };\\n  } catch (err) {\\n    return { answer: `I found ${rows.length} matching record(s), but couldn't generate a plain-English summary right now (AI provider unavailable: ${err.message}).` };\\n  }\\n};",
+                          "packageJson": "{}"
+                        },
+                        "errorHandlingOptions": {
+                          "retryOnFailure": {
+                            "value": false
+                          },
+                          "continueOnFailure": {
+                            "value": false
+                          }
+                        }
+                      },
+                      "nextAction": {
+                        "name": "step_8",
+                        "type": "PIECE",
+                        "valid": true,
+                        "settings": {
+                          "input": {
+                            "fields": {
+                              "body": {
+                                "table": "Leads",
+                                "answer": "{{step_6['output'].answer}}",
+                                "question": "{{trigger['output'].body.question}}"
+                              },
+                              "status": 200
+                            },
+                            "responseType": "json"
+                          },
+                          "pieceName": "@activepieces/piece-webhook",
+                          "actionName": "return_response",
+                          "pieceVersion": "0.1.36",
+                          "propertySettings": {},
+                          "errorHandlingOptions": {
+                            "retryOnFailure": {
+                              "value": false
+                            },
+                            "continueOnFailure": {
+                              "value": false
+                            }
+                          }
+                        },
+                        "displayName": "Reply (Leads)",
+                        "lastUpdatedDate": "2026-07-20T12:34:41.844Z"
+                      },
+                      "displayName": "Explain Leads Result",
+                      "lastUpdatedDate": "2026-07-20T12:34:41.844Z"
+                    },
+                    "displayName": "Query Leads",
+                    "lastUpdatedDate": "2026-07-20T12:34:41.843Z"
+                  },
+                  {
+                    "name": "step_5",
+                    "type": "PIECE",
+                    "valid": true,
+                    "settings": {
+                      "input": {
+                        "url": {
+                          "url": "/appI9DZRmXJeTdd6V/tbl1iU5gcsPVovo3J"
+                        },
+                        "auth": "{{connections['ebIpUp8C8ZOY22rHmCNDv']}}",
+                        "body": {},
+                        "method": "GET",
+                        "headers": {},
+                        "failsafe": false,
+                        "body_type": "none",
+                        "queryParams": {
+                          "maxRecords": "{{step_1['output'].parsedQuery.maxRecords}}",
+                          "filterByFormula": "{{step_1['output'].parsedQuery.filterByFormula}}"
+                        },
+                        "followRedirects": false,
+                        "response_is_binary": false
+                      },
+                      "pieceName": "@activepieces/piece-airtable",
+                      "actionName": "custom_api_call",
+                      "pieceVersion": "0.6.10",
+                      "propertySettings": {},
+                      "errorHandlingOptions": {
+                        "retryOnFailure": {
+                          "value": false
+                        },
+                        "continueOnFailure": {
+                          "value": false
+                        }
+                      }
+                    },
+                    "nextAction": {
+                      "name": "step_7",
+                      "type": "CODE",
+                      "valid": true,
+                      "settings": {
+                        "input": {
+                          "question": "{{trigger['output'].body.question}}",
+                          "resultBody": "{{step_5['output'].body}}"
+                        },
+                        "sourceCode": {
+                          "code": "export const code = async (inputs) => {\\n  const apiKey = 'YOUR_OPENAI_API_KEY_HERE';\\n  const question = inputs.question || '';\\n  let records = [];\\n  try {\\n    const parsed = typeof inputs.resultBody === 'string' ? JSON.parse(inputs.resultBody) : inputs.resultBody;\\n    records = parsed?.records || [];\\n  } catch (e) {\\n    records = [];\\n  }\\n\\n  if (!records.length) {\\n    return { answer: \\\"I ran the query but got no matching results \\u2014 try rephrasing or widening the timeframe.\\\" };\\n  }\\n\\n  const rows = records.map((r) => r.fields);\\n\\n  try {\\n    const response = await fetch('https://api.openai.com/v1/chat/completions', {\\n      method: 'POST',\\n      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },\\n      body: JSON.stringify({\\n        model: 'gpt-4o-mini',\\n        messages: [\\n          { role: 'system', content: 'You explain query results in one short, plain-English paragraph. Only use the data given, never invent numbers.' },\\n          { role: 'user', content: `Question: ${question}\\\\n\\\\nResult rows (JSON): ${JSON.stringify(rows).slice(0, 4000)}` },\\n        ],\\n        temperature: 0.1,\\n      }),\\n    });\\n    if (!response.ok) {\\n      const err = new Error(`OpenAI request failed: ${response.status}`);\\n      err.status = response.status;\\n      throw err;\\n    }\\n    const data = await response.json();\\n    const answer = data.choices?.[0]?.message?.content?.trim() ?? '';\\n    return { answer };\\n  } catch (err) {\\n    return { answer: `I found ${rows.length} matching record(s), but couldn't generate a plain-English summary right now (AI provider unavailable: ${err.message}).` };\\n  }\\n};",
+                          "packageJson": "{}"
+                        },
+                        "errorHandlingOptions": {
+                          "retryOnFailure": {
+                            "value": false
+                          },
+                          "continueOnFailure": {
+                            "value": false
+                          }
+                        }
+                      },
+                      "nextAction": {
+                        "name": "step_9",
+                        "type": "PIECE",
+                        "valid": true,
+                        "settings": {
+                          "input": {
+                            "fields": {
+                              "body": {
+                                "table": "Reports",
+                                "answer": "{{step_7['output'].answer}}",
+                                "question": "{{trigger['output'].body.question}}"
+                              },
+                              "status": 200
+                            },
+                            "responseType": "json"
+                          },
+                          "pieceName": "@activepieces/piece-webhook",
+                          "actionName": "return_response",
+                          "pieceVersion": "0.1.36",
+                          "propertySettings": {},
+                          "errorHandlingOptions": {
+                            "retryOnFailure": {
+                              "value": false
+                            },
+                            "continueOnFailure": {
+                              "value": false
+                            }
+                          }
+                        },
+                        "displayName": "Reply (Reports)",
+                        "lastUpdatedDate": "2026-07-20T12:34:41.846Z"
+                      },
+                      "displayName": "Explain Reports Result",
+                      "lastUpdatedDate": "2026-07-20T12:34:41.845Z"
+                    },
+                    "displayName": "Query Reports",
+                    "lastUpdatedDate": "2026-07-20T12:34:41.845Z"
+                  }
+                ],
+                "settings": {
+                  "branches": [
+                    {
+                      "branchName": "Leads",
+                      "branchType": "CONDITION",
+                      "conditions": [
+                        [
+                          {
+                            "operator": "TEXT_EXACTLY_MATCHES",
+                            "firstValue": "{{step_1['output'].parsedQuery.table}}",
+                            "secondValue": "Leads"
+                          }
+                        ]
+                      ]
+                    },
+                    {
+                      "branchName": "Reports",
+                      "branchType": "FALLBACK"
+                    }
+                  ],
+                  "executionType": "EXECUTE_FIRST_MATCH"
+                },
+                "displayName": "Which Table?",
+                "lastUpdatedDate": "2026-07-20T12:34:41.843Z"
+              }
+            ],
+            "settings": {
+              "branches": [
+                {
+                  "branchName": "Rejected",
+                  "branchType": "CONDITION",
+                  "conditions": [
+                    [
+                      {
+                        "operator": "BOOLEAN_IS_TRUE",
+                        "firstValue": "{{step_1['output'].rejected}}"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "branchName": "Valid Query",
+                  "branchType": "FALLBACK"
+                }
+              ],
+              "executionType": "EXECUTE_FIRST_MATCH"
+            },
+            "displayName": "Query Valid?",
+            "lastUpdatedDate": "2026-07-20T12:34:41.840Z"
+          },
+          "displayName": "Generate Query",
+          "lastUpdatedDate": "2026-07-20T12:34:41.840Z"
+        },
+        "lastUpdatedDate": "2026-07-20T13:25:10.896Z",
+        "type": "PIECE_TRIGGER",
+        "settings": {
+          "sampleData": {},
+          "propertySettings": {
+            "authFields": {
+              "type": "MANUAL",
+              "schema": {}
+            }
+          },
+          "pieceName": "@activepieces/piece-webhook",
+          "pieceVersion": "0.1.36",
+          "triggerName": "catch_webhook",
+          "input": {
+            "authType": "none",
+            "authFields": {}
+          }
+        }
+      },
+      "valid": true,
+      "schemaVersion": "22",
+      "notes": []
+    }
+  ],
+  "status": "PUBLISHED"
+}

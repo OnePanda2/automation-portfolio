@@ -1,0 +1,33 @@
+{
+  "_meta": {
+    "workflow": "10. AI Revenue Assistant",
+    "source": "Real execution, Activepieces run zFIddi72kx7d8G1o1Iagy, captured 2026-07-20",
+    "note": "Captured from a live test run. The OpenAI call fails with 401 here because this deployment runs with a placeholder key — this is the expected, tested fallback path, returning a structured rejection instead of a query result."
+  },
+  "webhook_input": {
+    "question": "How many leads came from India this week?"
+  },
+  "generate_query_output": {
+    "parsedQuery": null,
+    "rejected": true,
+    "rejectionReason": "AI provider unavailable (OpenAI request failed: 401)"
+  },
+  "webhook_response": {
+    "status": 200,
+    "body": {
+      "answer": null,
+      "reason": "AI provider unavailable (OpenAI request failed: 401)",
+      "question": "How many leads came from India this week?",
+      "rejected": true
+    }
+  },
+  "example_successful_query_shape": {
+    "_note": "Example Payload — inferred from workflow logic, not a captured execution, since a real OpenAI key was not available to produce this path during testing.",
+    "parsedQuery": {
+      "table": "Leads",
+      "filterByFormula": "{Country} = 'India'",
+      "maxRecords": 50
+    },
+    "rejected": false
+  }
+}

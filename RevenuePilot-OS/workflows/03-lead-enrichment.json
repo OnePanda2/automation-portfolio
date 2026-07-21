@@ -1,0 +1,316 @@
+﻿{
+  "name": "03. Lead Enrichment",
+  "type": "SHARED",
+  "summary": "",
+  "description": "",
+  "tags": [],
+  "blogUrl": "",
+  "metadata": {
+    "externalId": "i0fpEQ7DdhOCKzKM3ZNF4"
+  },
+  "author": "Siddesh thapa",
+  "categories": [],
+  "pieces": [
+    "@activepieces/piece-webhook",
+    "@activepieces/piece-http",
+    "@activepieces/piece-airtable"
+  ],
+  "flows": [
+    {
+      "displayName": "03. Lead Enrichment",
+      "trigger": {
+        "name": "trigger",
+        "valid": true,
+        "displayName": "catch_webhook",
+        "nextAction": {
+          "name": "step_1",
+          "type": "CODE",
+          "valid": true,
+          "settings": {
+            "input": {
+              "crmRecord": "{{trigger['output'].body.crmRecord}}"
+            },
+            "sourceCode": {
+              "code": "export const code = async (inputs) => {\n  const { crmRecord } = inputs;\n  const email = crmRecord?.fields?.Email || '';\n  const domain = email.includes('@') ? email.split('@')[1].toLowerCase().trim() : null;\n  return { crmRecord, domain };\n};",
+              "packageJson": "{}"
+            },
+            "errorHandlingOptions": {
+              "retryOnFailure": {
+                "value": false
+              },
+              "continueOnFailure": {
+                "value": false
+              }
+            }
+          },
+          "nextAction": {
+            "name": "step_2",
+            "type": "PIECE",
+            "valid": true,
+            "settings": {
+              "input": {
+                "url": "https://api.PLACEHOLDER-enrichment-provider.example/v1/companies/find",
+                "method": "GET",
+                "headers": {},
+                "authType": "BEARER_TOKEN",
+                "authFields": {
+                  "token": "YOUR_ENRICHMENT_API_KEY_HERE"
+                },
+                "failureMode": "continue_all",
+                "queryParams": {
+                  "domain": "{{step_1['output'].domain}}"
+                }
+              },
+              "pieceName": "@activepieces/piece-http",
+              "actionName": "send_request",
+              "pieceVersion": "0.11.10",
+              "propertySettings": {},
+              "errorHandlingOptions": {
+                "retryOnFailure": {
+                  "value": false
+                },
+                "continueOnFailure": {
+                  "value": false
+                }
+              }
+            },
+            "nextAction": {
+              "name": "step_3",
+              "type": "CODE",
+              "valid": true,
+              "settings": {
+                "input": {
+                  "crmRecord": "{{step_1['output'].crmRecord}}",
+                  "httpResponse": "{{step_2['output']}}"
+                },
+                "sourceCode": {
+                  "code": "// Normalizes whichever provider (Hunter / Apollo / Clearbit / generic) into one internal shape.\n// Swap the field paths below once a real vendor is wired in — this is a best-guess generic shape.\nfunction normalizeProviderResponse(raw) {\n  if (!raw) return null;\n  return {\n    companySize: raw.metrics?.employees ?? raw.company_size ?? null,\n    industry: raw.category?.industry ?? raw.industry ?? null,\n    country: raw.geo?.country ?? raw.location ?? null,\n  };\n}\n\nexport const code = async (inputs) => {\n  const { crmRecord, httpResponse } = inputs;\n  // The HTTP piece nests the real response under `.response` (status/body), not flat.\n  const status = httpResponse?.response?.status;\n  const body = httpResponse?.response?.body;\n  const ok = typeof status === 'number' && status >= 200 && status < 300;\n  const enrichment = ok ? normalizeProviderResponse(body) : null;\n\n  if (!enrichment) {\n    return {\n      success: false,\n      recordId: crmRecord.id,\n      fields: {\n        'Enrichment Incomplete': true,\n      },\n    };\n  }\n\n  return {\n    success: true,\n    recordId: crmRecord.id,\n    fields: {\n      'Company Size': enrichment.companySize ?? crmRecord.fields?.['Company Size'] ?? null,\n      Industry: enrichment.industry ?? crmRecord.fields?.Industry ?? null,\n      Country: enrichment.country ?? crmRecord.fields?.Country ?? null,\n      'Enrichment Incomplete': false,\n    },\n  };\n};",
+                  "packageJson": "{}"
+                },
+                "errorHandlingOptions": {
+                  "retryOnFailure": {
+                    "value": false
+                  },
+                  "continueOnFailure": {
+                    "value": false
+                  }
+                }
+              },
+              "nextAction": {
+                "name": "step_4",
+                "type": "ROUTER",
+                "valid": true,
+                "children": [
+                  {
+                    "name": "step_5",
+                    "type": "PIECE",
+                    "valid": true,
+                    "settings": {
+                      "input": {
+                        "auth": "{{connections['ebIpUp8C8ZOY22rHmCNDv']}}",
+                        "base": "appmDDdJrwOMI9X4m",
+                        "fields": {
+                          "fld5DcD4eOul2tHah": false,
+                          "fldL0kG0j4H5sOhST": "{{step_3['output'].fields.Industry}}",
+                          "fldQ0KqUAcy34dr5t": "{{step_3['output'].fields.Country}}",
+                          "fldg8BvZpKalYkv1B": "{{step_3['output'].fields['Company Size']}}"
+                        },
+                        "tableId": "tblQp36EpW9TJSfvt",
+                        "recordId": "{{step_3['output'].recordId}}"
+                      },
+                      "pieceName": "@activepieces/piece-airtable",
+                      "actionName": "airtable_update_record",
+                      "pieceVersion": "0.6.10",
+                      "propertySettings": {},
+                      "errorHandlingOptions": {
+                        "retryOnFailure": {
+                          "value": false
+                        },
+                        "continueOnFailure": {
+                          "value": false
+                        }
+                      }
+                    },
+                    "nextAction": {
+                      "name": "step_7",
+                      "type": "PIECE",
+                      "valid": true,
+                      "settings": {
+                        "input": {
+                          "url": "https://cloud.activepieces.com/api/v1/webhooks/OX0lFoxY8io17QrB8nA7t",
+                          "body": {
+                            "data": {
+                              "crmRecord": {
+                                "id": "{{step_5['output'].id}}",
+                                "fields": "{{step_5['output'].fields}}"
+                              }
+                            }
+                          },
+                          "method": "POST",
+                          "headers": {
+                            "Content-Type": "application/json"
+                          },
+                          "authType": "NONE",
+                          "body_type": "json",
+                          "use_proxy": false,
+                          "authFields": {},
+                          "failureMode": "continue_all",
+                          "queryParams": {},
+                          "proxy_settings": {},
+                          "followRedirects": false,
+                          "response_is_binary": false
+                        },
+                        "pieceName": "@activepieces/piece-http",
+                        "actionName": "send_request",
+                        "pieceVersion": "0.11.10",
+                        "propertySettings": {},
+                        "errorHandlingOptions": {
+                          "retryOnFailure": {
+                            "value": false
+                          },
+                          "continueOnFailure": {
+                            "value": false
+                          }
+                        }
+                      },
+                      "displayName": "Cascade → Flow 4 (AI Lead Qualification)",
+                      "lastUpdatedDate": "2026-07-20T13:13:29.163Z"
+                    },
+                    "displayName": "Update CRM with enrichment data",
+                    "lastUpdatedDate": "2026-07-20T13:13:29.163Z"
+                  },
+                  {
+                    "name": "step_6",
+                    "type": "PIECE",
+                    "valid": true,
+                    "settings": {
+                      "input": {
+                        "auth": "{{connections['ebIpUp8C8ZOY22rHmCNDv']}}",
+                        "base": "appmDDdJrwOMI9X4m",
+                        "fields": {
+                          "fld5DcD4eOul2tHah": true
+                        },
+                        "tableId": "tblQp36EpW9TJSfvt",
+                        "recordId": "{{step_3['output'].recordId}}"
+                      },
+                      "pieceName": "@activepieces/piece-airtable",
+                      "actionName": "airtable_update_record",
+                      "pieceVersion": "0.6.10",
+                      "propertySettings": {},
+                      "errorHandlingOptions": {
+                        "retryOnFailure": {
+                          "value": false
+                        },
+                        "continueOnFailure": {
+                          "value": false
+                        }
+                      }
+                    },
+                    "nextAction": {
+                      "name": "step_8",
+                      "type": "PIECE",
+                      "valid": true,
+                      "settings": {
+                        "input": {
+                          "url": "https://cloud.activepieces.com/api/v1/webhooks/OX0lFoxY8io17QrB8nA7t",
+                          "body": {
+                            "data": {
+                              "crmRecord": {
+                                "id": "{{step_6['output'].id}}",
+                                "fields": "{{step_6['output'].fields}}"
+                              }
+                            }
+                          },
+                          "method": "POST",
+                          "headers": {
+                            "Content-Type": "application/json"
+                          },
+                          "authType": "NONE",
+                          "body_type": "json",
+                          "use_proxy": false,
+                          "authFields": {},
+                          "failureMode": "continue_all",
+                          "queryParams": {},
+                          "proxy_settings": {},
+                          "followRedirects": false,
+                          "response_is_binary": false
+                        },
+                        "pieceName": "@activepieces/piece-http",
+                        "actionName": "send_request",
+                        "pieceVersion": "0.11.10",
+                        "propertySettings": {},
+                        "errorHandlingOptions": {
+                          "retryOnFailure": {
+                            "value": false
+                          },
+                          "continueOnFailure": {
+                            "value": false
+                          }
+                        }
+                      },
+                      "displayName": "Cascade → Flow 4 (AI Lead Qualification)",
+                      "lastUpdatedDate": "2026-07-20T13:13:29.163Z"
+                    },
+                    "displayName": "Flag CRM record as enrichment incomplete",
+                    "lastUpdatedDate": "2026-07-20T13:13:29.163Z"
+                  }
+                ],
+                "settings": {
+                  "branches": [
+                    {
+                      "branchName": "Enrichment succeeded",
+                      "branchType": "CONDITION",
+                      "conditions": [
+                        [
+                          {
+                            "operator": "BOOLEAN_IS_TRUE",
+                            "firstValue": "{{step_3['output'].success}}"
+                          }
+                        ]
+                      ]
+                    },
+                    {
+                      "branchName": "Enrichment incomplete",
+                      "branchType": "FALLBACK"
+                    }
+                  ],
+                  "executionType": "EXECUTE_FIRST_MATCH"
+                },
+                "displayName": "Route by enrichment success",
+                "lastUpdatedDate": "2026-07-20T13:13:29.162Z"
+              },
+              "displayName": "Normalize response + decide enrichment status",
+              "lastUpdatedDate": "2026-07-20T13:13:29.162Z"
+            },
+            "displayName": "Enrichment API call (PLACEHOLDER — needs real vendor + API key)",
+            "lastUpdatedDate": "2026-07-20T13:13:29.162Z"
+          },
+          "displayName": "Extract domain from email",
+          "lastUpdatedDate": "2026-07-20T13:13:29.162Z"
+        },
+        "lastUpdatedDate": "2026-07-20T13:13:29.283Z",
+        "type": "PIECE_TRIGGER",
+        "settings": {
+          "sampleData": {},
+          "propertySettings": {
+            "authFields": {
+              "type": "MANUAL",
+              "schema": {}
+            }
+          },
+          "pieceName": "@activepieces/piece-webhook",
+          "pieceVersion": "0.1.36",
+          "triggerName": "catch_webhook",
+          "input": {
+            "authType": "none",
+            "authFields": {}
+          }
+        }
+      },
+      "valid": true,
+      "schemaVersion": "22",
+      "notes": []
+    }
+  ],
+  "status": "PUBLISHED"
+}

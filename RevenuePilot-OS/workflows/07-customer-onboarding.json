@@ -1,0 +1,694 @@
+﻿{
+  "name": "07. Customer Onboarding",
+  "type": "SHARED",
+  "summary": "",
+  "description": "",
+  "tags": [],
+  "blogUrl": "",
+  "metadata": {
+    "externalId": "ICt4hl8EZqIGCzF48MF56"
+  },
+  "author": "Siddesh thapa",
+  "categories": [],
+  "pieces": [
+    "@activepieces/piece-webhook",
+    "@activepieces/piece-airtable",
+    "@activepieces/piece-gmail",
+    "@activepieces/piece-slack"
+  ],
+  "flows": [
+    {
+      "displayName": "07. Customer Onboarding",
+      "trigger": {
+        "name": "trigger",
+        "valid": true,
+        "displayName": "catch_webhook",
+        "nextAction": {
+          "name": "step_10",
+          "type": "CODE",
+          "valid": true,
+          "settings": {
+            "input": {},
+            "sourceCode": {
+              "code": "export const code = async (inputs) => {\n  return { nowIso: new Date().toISOString() };\n};",
+              "packageJson": "{}"
+            },
+            "errorHandlingOptions": {
+              "retryOnFailure": {
+                "value": false
+              },
+              "continueOnFailure": {
+                "value": false
+              }
+            }
+          },
+          "nextAction": {
+            "name": "step_1",
+            "type": "PIECE",
+            "valid": true,
+            "settings": {
+              "input": {
+                "auth": "{{connections['ebIpUp8C8ZOY22rHmCNDv']}}",
+                "base": "apppjniQ9RB0rJRVQ",
+                "fields": {
+                  "fldT7VkMC3ECTwEgB": "{{step_10['output'].nowIso}}",
+                  "fldb1ps1XOV0qh0Vd": "{{trigger['output'].body.crmRecord.id}}",
+                  "fldzzmJuqUmHFG0uF": "{{trigger['output'].body.crmRecord.fields.Company}}"
+                },
+                "tableId": "tblwoFJSyKBL8LK1c"
+              },
+              "pieceName": "@activepieces/piece-airtable",
+              "actionName": "airtable_create_record",
+              "pieceVersion": "0.6.10",
+              "propertySettings": {
+                "fields": {
+                  "type": "MANUAL",
+                  "schema": {
+                    "fldARSUP2oEgFNitA": {
+                      "type": "SHORT_TEXT",
+                      "required": false,
+                      "displayName": "Assigned CSM"
+                    },
+                    "fldEvQwVNjEwUAwld": {
+                      "type": "SHORT_TEXT",
+                      "required": false,
+                      "displayName": "Page URL"
+                    },
+                    "fldT7VkMC3ECTwEgB": {
+                      "type": "SHORT_TEXT",
+                      "required": false,
+                      "description": "Expected format: mmmm d,yyyy",
+                      "displayName": "Created At"
+                    },
+                    "fldb1ps1XOV0qh0Vd": {
+                      "type": "SHORT_TEXT",
+                      "required": false,
+                      "displayName": "Lead Record ID"
+                    },
+                    "fldhqVqlm54gJTkyq": {
+                      "type": "SHORT_TEXT",
+                      "required": false,
+                      "displayName": "Folder URL"
+                    },
+                    "fldwj3xt9hNKm1bAj": {
+                      "type": "SHORT_TEXT",
+                      "required": false,
+                      "description": "Expected format: mmmm d,yyyy",
+                      "displayName": "Completed At"
+                    },
+                    "fldzzmJuqUmHFG0uF": {
+                      "type": "SHORT_TEXT",
+                      "required": false,
+                      "displayName": "Company"
+                    }
+                  }
+                }
+              },
+              "errorHandlingOptions": {
+                "retryOnFailure": {
+                  "value": false
+                },
+                "continueOnFailure": {
+                  "value": false
+                }
+              }
+            },
+            "nextAction": {
+              "name": "step_2",
+              "type": "PIECE",
+              "valid": true,
+              "settings": {
+                "input": {
+                  "url": {
+                    "url": "/apppjniQ9RB0rJRVQ/tblKJE1GEDDIz4tUL"
+                  },
+                  "auth": "{{connections['ebIpUp8C8ZOY22rHmCNDv']}}",
+                  "body": {},
+                  "method": "GET",
+                  "headers": {},
+                  "body_type": "none",
+                  "queryParams": {
+                    "filterByFormula": "{Active}=TRUE()"
+                  }
+                },
+                "pieceName": "@activepieces/piece-airtable",
+                "actionName": "custom_api_call",
+                "sampleData": {},
+                "pieceVersion": "0.6.10",
+                "propertySettings": {
+                  "url": {
+                    "type": "MANUAL",
+                    "schema": {
+                      "url": {
+                        "type": "SHORT_TEXT",
+                        "required": true,
+                        "description": "You can either use the full URL or the relative path to the base URL\ni.e https://api.airtable.com/v0/resource or /resource",
+                        "displayName": "URL",
+                        "defaultValue": "https://api.airtable.com/v0"
+                      }
+                    }
+                  },
+                  "body": {
+                    "type": "MANUAL",
+                    "schema": {}
+                  }
+                },
+                "errorHandlingOptions": {
+                  "retryOnFailure": {
+                    "value": false
+                  },
+                  "continueOnFailure": {
+                    "value": false
+                  }
+                }
+              },
+              "nextAction": {
+                "name": "step_3",
+                "type": "CODE",
+                "valid": true,
+                "settings": {
+                  "input": {
+                    "csmResponse": "{{step_2['output']}}"
+                  },
+                  "sampleData": {},
+                  "sourceCode": {
+                    "code": "export const code = async (inputs) => {\n  // NOTE: unlike the generic HTTP piece (which nests under .response),\n  // the Airtable piece's custom_api_call returns {status, headers, body} directly.\n  const records = inputs.csmResponse?.body?.records || [];\n  const csmWorkloads = records.map(r => ({\n    recordId: r.id,\n    email: r.fields.Email,\n    name: r.fields.Name,\n    openOnboardings: r.fields['Open Onboardings'] || 0,\n  }));\n\n  if (csmWorkloads.length === 0) {\n    throw new Error('No active CSMs found — cannot assign onboarding.');\n  }\n\n  // Find whoever currently has the fewest open onboardings.\n  const sorted = [...csmWorkloads].sort((a, b) => a.openOnboardings - b.openOnboardings);\n  const assigned = sorted[0];\n\n  return {\n    assignedCsmEmail: assigned.email,\n    assignedCsmName: assigned.name,\n    assignedCsmRecordId: assigned.recordId,\n    newOpenCount: assigned.openOnboardings + 1,\n  };\n};",
+                    "packageJson": "{}"
+                  },
+                  "errorHandlingOptions": {
+                    "retryOnFailure": {
+                      "value": false
+                    },
+                    "continueOnFailure": {
+                      "value": false
+                    }
+                  }
+                },
+                "nextAction": {
+                  "name": "step_4",
+                  "skip": false,
+                  "type": "PIECE",
+                  "valid": true,
+                  "settings": {
+                    "input": {
+                      "auth": "{{connections['ebIpUp8C8ZOY22rHmCNDv']}}",
+                      "base": "apppjniQ9RB0rJRVQ",
+                      "fields": {
+                        "fldMDJ3KHmgkZWG5e": "{{step_3['output']['newOpenCount']}}",
+                        "fldhlKatZi2ezpr1E": false
+                      },
+                      "tableId": "tblKJE1GEDDIz4tUL",
+                      "recordId": "{{step_3['output']['assignedCsmRecordId']}}"
+                    },
+                    "pieceName": "@activepieces/piece-airtable",
+                    "actionName": "airtable_update_record",
+                    "sampleData": {},
+                    "pieceVersion": "0.6.10",
+                    "propertySettings": {
+                      "base": {
+                        "type": "MANUAL"
+                      },
+                      "fields": {
+                        "type": "MANUAL",
+                        "schema": {
+                          "fldCKjYHPydVjdrYN": {
+                            "type": "SHORT_TEXT",
+                            "required": false,
+                            "displayName": "Name"
+                          },
+                          "fldMDJ3KHmgkZWG5e": {
+                            "type": "NUMBER",
+                            "required": false,
+                            "displayName": "Open Onboardings"
+                          },
+                          "fldhlKatZi2ezpr1E": {
+                            "type": "CHECKBOX",
+                            "required": false,
+                            "displayName": "Active"
+                          },
+                          "fldw0DxokG0i5NB59": {
+                            "type": "SHORT_TEXT",
+                            "required": false,
+                            "displayName": "Email"
+                          }
+                        }
+                      },
+                      "tableId": {
+                        "type": "MANUAL"
+                      },
+                      "recordId": {
+                        "type": "MANUAL"
+                      }
+                    },
+                    "errorHandlingOptions": {
+                      "retryOnFailure": {
+                        "value": false
+                      },
+                      "continueOnFailure": {
+                        "value": false
+                      }
+                    }
+                  },
+                  "nextAction": {
+                    "name": "step_5",
+                    "skip": false,
+                    "type": "PIECE",
+                    "valid": true,
+                    "settings": {
+                      "input": {
+                        "auth": "{{connections['ebIpUp8C8ZOY22rHmCNDv']}}",
+                        "base": "appmDDdJrwOMI9X4m",
+                        "fields": {
+                          "fld1Sb4Qn8gFHMtLk": "sellcN956pP4gOHmD",
+                          "fld2er3cnb9rditad": null,
+                          "fld5DcD4eOul2tHah": false,
+                          "fldPMdbIoSwmUCKU0": null,
+                          "fldXgUauzbCWk9ZcQ": "{{step_3['output']['assignedCsmName']}}",
+                          "fldYCQ9gyZVGgsvLC": null,
+                          "fldhstHuUA0mvEjNw": null,
+                          "fldpiImg5XFrSdfPp": false,
+                          "fldutyVntN5EvEpeS": "{{step_3['output']['assignedCsmName']}}"
+                        },
+                        "tableId": "tblQp36EpW9TJSfvt",
+                        "recordId": "{{trigger['output']['body']['crmRecord']['id']}}"
+                      },
+                      "pieceName": "@activepieces/piece-airtable",
+                      "actionName": "airtable_update_record",
+                      "sampleData": {},
+                      "pieceVersion": "0.6.10",
+                      "propertySettings": {
+                        "base": {
+                          "type": "MANUAL"
+                        },
+                        "fields": {
+                          "type": "MANUAL",
+                          "schema": {
+                            "fld1Sb4Qn8gFHMtLk": {
+                              "type": "STATIC_DROPDOWN",
+                              "options": {
+                                "options": [],
+                                "disabled": false
+                              },
+                              "required": false,
+                              "displayName": "Status"
+                            },
+                            "fld2er3cnb9rditad": {
+                              "type": "STATIC_DROPDOWN",
+                              "options": {
+                                "options": [],
+                                "disabled": false
+                              },
+                              "required": false,
+                              "displayName": "ICP Tier"
+                            },
+                            "fld5DcD4eOul2tHah": {
+                              "type": "CHECKBOX",
+                              "required": false,
+                              "displayName": "Enrichment Incomplete"
+                            },
+                            "fld9DuwtxBcapOU0V": {
+                              "type": "LONG_TEXT",
+                              "required": false,
+                              "displayName": "AI Reasoning"
+                            },
+                            "fldIfwi0ufLof3Gtp": {
+                              "type": "SHORT_TEXT",
+                              "required": false,
+                              "displayName": "Email"
+                            },
+                            "fldL0kG0j4H5sOhST": {
+                              "type": "SHORT_TEXT",
+                              "required": false,
+                              "displayName": "Industry"
+                            },
+                            "fldNZ8PYQpof4aEVz": {
+                              "type": "LONG_TEXT",
+                              "required": false,
+                              "displayName": "Notes"
+                            },
+                            "fldPMdbIoSwmUCKU0": {
+                              "type": "STATIC_DROPDOWN",
+                              "options": {
+                                "options": [],
+                                "disabled": false
+                              },
+                              "required": false,
+                              "displayName": "Territory"
+                            },
+                            "fldQ0KqUAcy34dr5t": {
+                              "type": "SHORT_TEXT",
+                              "required": false,
+                              "displayName": "Country"
+                            },
+                            "fldXgUauzbCWk9ZcQ": {
+                              "type": "SHORT_TEXT",
+                              "required": false,
+                              "displayName": "Assigned Rep"
+                            },
+                            "fldYCQ9gyZVGgsvLC": {
+                              "type": "STATIC_DROPDOWN",
+                              "options": {
+                                "options": [],
+                                "disabled": false
+                              },
+                              "required": false,
+                              "displayName": "Priority"
+                            },
+                            "flddeYKD6OQpzG6Xp": {
+                              "type": "SHORT_TEXT",
+                              "required": false,
+                              "displayName": "Drive Folder URL"
+                            },
+                            "flddrVDIgh6hzEvwt": {
+                              "type": "SHORT_TEXT",
+                              "required": false,
+                              "description": "Expected format: mmmm d,yyyy",
+                              "displayName": "Created At"
+                            },
+                            "fldg8BvZpKalYkv1B": {
+                              "type": "NUMBER",
+                              "required": false,
+                              "displayName": "Company Size"
+                            },
+                            "fldhstHuUA0mvEjNw": {
+                              "type": "STATIC_DROPDOWN",
+                              "options": {
+                                "options": [],
+                                "disabled": false
+                              },
+                              "required": false,
+                              "displayName": "Source"
+                            },
+                            "fldjP9MZtCrDIUUUX": {
+                              "type": "SHORT_TEXT",
+                              "required": false,
+                              "displayName": "Full Name"
+                            },
+                            "fldmZOwXgZntwwb4H": {
+                              "type": "SHORT_TEXT",
+                              "required": false,
+                              "displayName": "Name"
+                            },
+                            "fldnMOLTHf2lt5qky": {
+                              "type": "SHORT_TEXT",
+                              "required": false,
+                              "displayName": "Phone"
+                            },
+                            "fldpiImg5XFrSdfPp": {
+                              "type": "CHECKBOX",
+                              "required": false,
+                              "displayName": "Duplicate"
+                            },
+                            "fldqlKtiQIWrU9ana": {
+                              "type": "NUMBER",
+                              "required": false,
+                              "displayName": "Lead Score"
+                            },
+                            "fldu4mXov4jxytwOg": {
+                              "type": "SHORT_TEXT",
+                              "required": false,
+                              "displayName": "Company"
+                            },
+                            "flduY5V3kxfydZ48t": {
+                              "type": "SHORT_TEXT",
+                              "required": false,
+                              "displayName": "Notion Page URL"
+                            },
+                            "fldutyVntN5EvEpeS": {
+                              "type": "SHORT_TEXT",
+                              "required": false,
+                              "displayName": "Assigned CSM"
+                            },
+                            "fldvYNbPAbpc9wbEL": {
+                              "type": "SHORT_TEXT",
+                              "required": false,
+                              "displayName": "Attachments"
+                            },
+                            "fldxwTNelMD6I8CSg": {
+                              "type": "SHORT_TEXT",
+                              "required": false,
+                              "description": "Expected format: mmmm d,yyyy",
+                              "displayName": "Onboarding Completed At"
+                            }
+                          }
+                        },
+                        "tableId": {
+                          "type": "MANUAL"
+                        },
+                        "recordId": {
+                          "type": "MANUAL"
+                        }
+                      },
+                      "errorHandlingOptions": {
+                        "retryOnFailure": {
+                          "value": false
+                        },
+                        "continueOnFailure": {
+                          "value": false
+                        }
+                      }
+                    },
+                    "nextAction": {
+                      "name": "step_6",
+                      "skip": false,
+                      "type": "PIECE",
+                      "valid": true,
+                      "settings": {
+                        "input": {
+                          "cc": [],
+                          "bcc": [],
+                          "auth": "{{connections['gsjS3VWNf6zEJtnZnCft5']}}",
+                          "body": "Hi {{trigger['output']['body']['crmRecord']['fields']['Full Name']}},\nWelcome to RevenuePilot.\nYour onboarding has started and your dedicated Customer Success Manager is:\n{{step_3['output']['assignedCsmName']}}\nWe'll be in touch shortly with the next steps.\nThanks,\nThe RevenuePilot Team",
+                          "draft": false,
+                          "subject": "Welcome to RevenuePilot 🎉",
+                          "receiver": [
+                            "{{trigger['output']['body']['crmRecord']['fields']['Email']}}"
+                          ],
+                          "reply_to": [],
+                          "body_type": "plain_text",
+                          "attachments": []
+                        },
+                        "pieceName": "@activepieces/piece-gmail",
+                        "actionName": "send_email",
+                        "sampleData": {},
+                        "pieceVersion": "0.12.7",
+                        "propertySettings": {
+                          "cc": {
+                            "type": "MANUAL"
+                          },
+                          "bcc": {
+                            "type": "MANUAL"
+                          },
+                          "body": {
+                            "type": "MANUAL"
+                          },
+                          "from": {
+                            "type": "MANUAL"
+                          },
+                          "draft": {
+                            "type": "MANUAL"
+                          },
+                          "subject": {
+                            "type": "MANUAL"
+                          },
+                          "receiver": {
+                            "type": "MANUAL"
+                          },
+                          "reply_to": {
+                            "type": "MANUAL"
+                          },
+                          "body_type": {
+                            "type": "MANUAL"
+                          },
+                          "attachments": {
+                            "type": "MANUAL"
+                          },
+                          "in_reply_to": {
+                            "type": "MANUAL"
+                          },
+                          "sender_name": {
+                            "type": "MANUAL"
+                          }
+                        },
+                        "errorHandlingOptions": {
+                          "retryOnFailure": {
+                            "value": false
+                          },
+                          "continueOnFailure": {
+                            "value": false
+                          }
+                        }
+                      },
+                      "nextAction": {
+                        "name": "step_7",
+                        "skip": false,
+                        "type": "PIECE",
+                        "valid": true,
+                        "settings": {
+                          "input": {
+                            "auth": "{{connections['P5rLyWzV29TV94zcu6omH']}}",
+                            "text": "🎉 New customer onboarded\nCompany: {{trigger['output']['body']['crmRecord']['fields']['Company']}}\nCustomer: {{trigger['output']['body']['crmRecord']['fields']['Full Name']}}\nAssigned CSM: {{step_3['output']['assignedCsmName']}}\nStatus: Onboarding started\nChecklist Created: ✅\nWelcome Email Sent: ✅",
+                            "blocks": [],
+                            "channel": "C0BFX7KJAC9",
+                            "sendAsBot": false,
+                            "unfurlLinks": true,
+                            "replyBroadcast": false,
+                            "mentionOriginFlow": false
+                          },
+                          "pieceName": "@activepieces/piece-slack",
+                          "actionName": "send_channel_message",
+                          "sampleData": {},
+                          "pieceVersion": "0.17.3",
+                          "propertySettings": {
+                            "file": {
+                              "type": "MANUAL"
+                            },
+                            "info": {
+                              "type": "MANUAL"
+                            },
+                            "text": {
+                              "type": "MANUAL"
+                            },
+                            "blocks": {
+                              "type": "MANUAL"
+                            },
+                            "channel": {
+                              "type": "MANUAL"
+                            },
+                            "threadTs": {
+                              "type": "MANUAL"
+                            },
+                            "username": {
+                              "type": "MANUAL"
+                            },
+                            "iconEmoji": {
+                              "type": "MANUAL"
+                            },
+                            "sendAsBot": {
+                              "type": "MANUAL"
+                            },
+                            "unfurlLinks": {
+                              "type": "MANUAL"
+                            },
+                            "profilePicture": {
+                              "type": "MANUAL"
+                            },
+                            "replyBroadcast": {
+                              "type": "MANUAL"
+                            },
+                            "mentionOriginFlow": {
+                              "type": "MANUAL"
+                            }
+                          },
+                          "errorHandlingOptions": {
+                            "retryOnFailure": {
+                              "value": false
+                            },
+                            "continueOnFailure": {
+                              "value": false
+                            }
+                          }
+                        },
+                        "nextAction": {
+                          "name": "step_8",
+                          "skip": false,
+                          "type": "CODE",
+                          "valid": true,
+                          "settings": {
+                            "input": {
+                              "company": "{{trigger['output']['body']['crmRecord']['fields']['Company']}}",
+                              "customer": "{{trigger['output']['body']['crmRecord']['fields']['Full Name']}}"
+                            },
+                            "sampleData": {},
+                            "sourceCode": {
+                              "code": "export const code = async (inputs) => {\n  return {\n    status: \"placeholder\",\n    integration: \"Notion\",\n    action: \"Create onboarding page\",\n    company: inputs.company,\n    customer: inputs.customer,\n    reason: \"Notion workspace not connected yet\"\n  };\n};",
+                              "packageJson": "{}"
+                            },
+                            "errorHandlingOptions": {
+                              "retryOnFailure": {
+                                "value": false
+                              },
+                              "continueOnFailure": {
+                                "value": false
+                              }
+                            }
+                          },
+                          "nextAction": {
+                            "name": "step_9",
+                            "skip": false,
+                            "type": "CODE",
+                            "valid": true,
+                            "settings": {
+                              "input": {
+                                "company": "{{trigger['output']['body']['crmRecord']['fields']['Company']}}"
+                              },
+                              "sampleData": {},
+                              "sourceCode": {
+                                "code": "export const code = async (inputs) => {\n  return {\n    status: \"placeholder\",\n    integration: \"Google Drive\",\n    action: \"Create customer folder\",\n    folderName: `${inputs.company} Onboarding`,\n    reason: \"Google Drive not connected yet\"\n  };\n};",
+                                "packageJson": "{}"
+                              },
+                              "errorHandlingOptions": {
+                                "retryOnFailure": {
+                                  "value": false
+                                },
+                                "continueOnFailure": {
+                                  "value": false
+                                }
+                              }
+                            },
+                            "displayName": "Placeholder - Create Google Drive Folder",
+                            "lastUpdatedDate": "2026-07-20T12:33:55.470Z"
+                          },
+                          "displayName": "Placeholder - Create Notion Page",
+                          "lastUpdatedDate": "2026-07-20T12:33:55.470Z"
+                        },
+                        "displayName": "Send Message To A Channel",
+                        "lastUpdatedDate": "2026-07-20T12:33:55.469Z"
+                      },
+                      "displayName": "Send Email",
+                      "lastUpdatedDate": "2026-07-20T12:33:55.469Z"
+                    },
+                    "displayName": "Update Airtable Record",
+                    "lastUpdatedDate": "2026-07-20T12:33:55.469Z"
+                  },
+                  "displayName": "Update Airtable Record",
+                  "lastUpdatedDate": "2026-07-20T15:07:06.162Z"
+                },
+                "displayName": "Round-robin: assign CSM with fewest open onboardings",
+                "lastUpdatedDate": "2026-07-20T12:33:55.469Z"
+              },
+              "displayName": "Fetch active CSM pool",
+              "lastUpdatedDate": "2026-07-20T15:04:16.947Z"
+            },
+            "displayName": "Create onboarding checklist row (must succeed before anything else fires)",
+            "lastUpdatedDate": "2026-07-20T12:33:55.469Z"
+          },
+          "displayName": "Get Current Timestamp",
+          "lastUpdatedDate": "2026-07-20T12:33:55.468Z"
+        },
+        "lastUpdatedDate": "2026-07-20T12:33:55.468Z",
+        "type": "PIECE_TRIGGER",
+        "settings": {
+          "sampleData": {},
+          "propertySettings": {
+            "authFields": {
+              "type": "MANUAL",
+              "schema": {}
+            }
+          },
+          "pieceName": "@activepieces/piece-webhook",
+          "pieceVersion": "0.1.36",
+          "triggerName": "catch_webhook",
+          "input": {
+            "authType": "none",
+            "authFields": {}
+          }
+        }
+      },
+      "valid": true,
+      "schemaVersion": "22",
+      "notes": []
+    }
+  ],
+  "status": "PUBLISHED"
+}

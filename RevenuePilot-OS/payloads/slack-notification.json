@@ -1,0 +1,33 @@
+{
+  "_meta": {
+    "workflow": "6. Slack Notification System",
+    "source": "Real execution, Activepieces production run, captured 2026-07-20",
+    "note": "The message-building logic is captured verbatim from a live run. The actual Slack post in this specific run failed with not_in_channel because the bot hadn't yet been invited to the #leads channel at the time of capture — see docs/troubleshooting.md."
+  },
+  "webhook_input": {
+    "crmRecord": {
+      "fields": {
+        "Status": "New",
+        "Territory": "unassigned",
+        "Assigned Rep": "sdr_pool",
+        "Priority": "medium",
+        "Lead Score": 0,
+        "AI Reasoning": "AI scoring unavailable (OpenAI request failed: 401). Defaulted to medium priority for manual review. (Persona: unknown)",
+        "Email": "priya.shah@meridiananalytics.io",
+        "Full Name": "Priya Shah",
+        "Company": "Meridian Analytics"
+      },
+      "recordId": "recxfnwDxSaYBseM7"
+    },
+    "territory": "unassigned",
+    "repPool": "sdr_pool"
+  },
+  "build_messages_output": {
+    "messages": [
+      {
+        "channel": "#leads",
+        "text": "*New lead routed to sdr_pool*\n*Company:* Meridian Analytics\n*Contact:* Priya Shah <priya.shah@meridiananalytics.io>\n*Lead Score:* 0 (medium)\n*Territory:* unassigned\n*Reasoning:* AI scoring unavailable (OpenAI request failed: 401). Defaulted to medium priority for manual review. (Persona: unknown)"
+      }
+    ]
+  }
+}

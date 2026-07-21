@@ -1,0 +1,206 @@
+﻿{
+  "name": "09. Error Monitoring",
+  "type": "SHARED",
+  "summary": "",
+  "description": "",
+  "tags": [],
+  "blogUrl": "",
+  "metadata": {
+    "externalId": "q9av1obO6tnIBtE08xskj"
+  },
+  "author": "Siddesh thapa",
+  "categories": [],
+  "pieces": [
+    "@activepieces/piece-webhook",
+    "@activepieces/piece-airtable",
+    "@activepieces/piece-slack",
+    "@activepieces/piece-gmail"
+  ],
+  "flows": [
+    {
+      "displayName": "09. Error Monitoring",
+      "trigger": {
+        "name": "trigger",
+        "valid": true,
+        "displayName": "catch_webhook",
+        "nextAction": {
+          "name": "step_1",
+          "type": "CODE",
+          "valid": true,
+          "settings": {
+            "input": {
+              "body": "{{trigger['output'].body}}"
+            },
+            "sourceCode": {
+              "code": "export const code = async (inputs) => {\n  const body = inputs.body || {};\n  const { flowName, stepName, error, payload, retryCount } = body;\n\n  const errObj = error || {};\n  const RETRYABLE_STATUS = [429, 500, 502, 503, 504];\n  const retryable = errObj.name === 'TimeoutError' || RETRYABLE_STATUS.includes(errObj.status);\n  const rc = typeof retryCount === 'number' ? retryCount : 0;\n  const escalate = !retryable || rc >= 3;\n\n  return {\n    flowName: flowName || 'unknown',\n    stepName: stepName || 'unknown',\n    errorMessage: errObj.message || String(errObj) || 'Unknown error',\n    payloadJson: JSON.stringify(payload || {}),\n    retryCount: rc,\n    createdAtIso: new Date().toISOString(),\n    retryable,\n    escalate\n  };\n};",
+              "packageJson": "{}"
+            },
+            "errorHandlingOptions": {
+              "retryOnFailure": {
+                "value": false
+              },
+              "continueOnFailure": {
+                "value": false
+              }
+            }
+          },
+          "nextAction": {
+            "name": "step_2",
+            "type": "PIECE",
+            "valid": true,
+            "settings": {
+              "input": {
+                "auth": "{{connections['ebIpUp8C8ZOY22rHmCNDv']}}",
+                "base": "appERKtwV2hKJL3fI",
+                "fields": {
+                  "fldE5b6DfVKB9l2YT": "{{step_1['output'].payloadJson}}",
+                  "fldH5Evdd9VzxTb5J": "{{step_1['output'].retryCount}}",
+                  "fldJS3VV3WFfMRfJh": "{{step_1['output'].flowName}}",
+                  "fldOgtYDBdtVAxq1w": "{{step_1['output'].createdAtIso}}",
+                  "fldWUUnSQBXB8GAAC": "{{step_1['output'].errorMessage}}",
+                  "fldkWsPIWuXzrRuur": false,
+                  "fldoOrtrpHaM9Ym5I": "{{step_1['output'].stepName}}"
+                },
+                "tableId": "tbla5NI6QihYT7ui5"
+              },
+              "pieceName": "@activepieces/piece-airtable",
+              "actionName": "airtable_create_record",
+              "pieceVersion": "0.6.10",
+              "propertySettings": {},
+              "errorHandlingOptions": {
+                "retryOnFailure": {
+                  "value": false
+                },
+                "continueOnFailure": {
+                  "value": false
+                }
+              }
+            },
+            "nextAction": {
+              "name": "step_3",
+              "type": "PIECE",
+              "valid": true,
+              "settings": {
+                "input": {
+                  "auth": "{{connections['P5rLyWzV29TV94zcu6omH']}}",
+                  "text": "🚨 *{{step_1['output'].flowName}}* failed at step *{{step_1['output'].stepName}}*\n```{{step_1['output'].errorMessage}}```\nRetryable: {{step_1['output'].retryable}} | Escalate: {{step_1['output'].escalate}}",
+                  "channel": "C0BFX7KJAC9",
+                  "sendAsBot": true,
+                  "unfurlLinks": true,
+                  "replyBroadcast": false,
+                  "mentionOriginFlow": false
+                },
+                "pieceName": "@activepieces/piece-slack",
+                "actionName": "send_channel_message",
+                "pieceVersion": "0.17.3",
+                "propertySettings": {},
+                "errorHandlingOptions": {
+                  "retryOnFailure": {
+                    "value": false
+                  },
+                  "continueOnFailure": {
+                    "value": false
+                  }
+                }
+              },
+              "nextAction": {
+                "name": "step_4",
+                "type": "ROUTER",
+                "valid": true,
+                "children": [
+                  {
+                    "name": "step_5",
+                    "type": "PIECE",
+                    "valid": true,
+                    "settings": {
+                      "input": {
+                        "cc": [],
+                        "bcc": [],
+                        "auth": "{{connections['gsjS3VWNf6zEJtnZnCft5']}}",
+                        "body": "{{step_1['output'].stepName}} failed permanently.\n\nFlow: {{step_1['output'].flowName}}\nError: {{step_1['output'].errorMessage}}\nRetry Count: {{step_1['output'].retryCount}}\n\nPayload:\n{{step_1['output'].payloadJson}}",
+                        "draft": false,
+                        "subject": "[RevenuePilot] {{step_1['output'].flowName}} escalation",
+                        "receiver": [
+                          "admin@revenuepilot.example"
+                        ],
+                        "reply_to": [],
+                        "body_type": "plain_text",
+                        "attachments": []
+                      },
+                      "pieceName": "@activepieces/piece-gmail",
+                      "actionName": "send_email",
+                      "pieceVersion": "0.12.7",
+                      "propertySettings": {},
+                      "errorHandlingOptions": {
+                        "retryOnFailure": {
+                          "value": false
+                        },
+                        "continueOnFailure": {
+                          "value": false
+                        }
+                      }
+                    },
+                    "displayName": "Escalation Email to Admin",
+                    "lastUpdatedDate": "2026-07-20T12:34:20.774Z"
+                  },
+                  null
+                ],
+                "settings": {
+                  "branches": [
+                    {
+                      "branchName": "Escalate",
+                      "branchType": "CONDITION",
+                      "conditions": [
+                        [
+                          {
+                            "operator": "BOOLEAN_IS_TRUE",
+                            "firstValue": "{{step_1['output'].escalate}}"
+                          }
+                        ]
+                      ]
+                    },
+                    {
+                      "branchName": "No Escalation",
+                      "branchType": "FALLBACK"
+                    }
+                  ],
+                  "executionType": "EXECUTE_FIRST_MATCH"
+                },
+                "displayName": "Escalate?",
+                "lastUpdatedDate": "2026-07-20T12:34:20.773Z"
+              },
+              "displayName": "Alert #automations",
+              "lastUpdatedDate": "2026-07-20T12:34:20.773Z"
+            },
+            "displayName": "Log Failure to Airtable",
+            "lastUpdatedDate": "2026-07-20T12:34:20.772Z"
+          },
+          "displayName": "Classify Failure",
+          "lastUpdatedDate": "2026-07-20T12:34:20.772Z"
+        },
+        "lastUpdatedDate": "2026-07-20T13:24:17.307Z",
+        "type": "PIECE_TRIGGER",
+        "settings": {
+          "sampleData": {},
+          "propertySettings": {
+            "authFields": {
+              "type": "MANUAL",
+              "schema": {}
+            }
+          },
+          "pieceName": "@activepieces/piece-webhook",
+          "pieceVersion": "0.1.36",
+          "triggerName": "catch_webhook",
+          "input": {
+            "authType": "none",
+            "authFields": {}
+          }
+        }
+      },
+      "valid": true,
+      "schemaVersion": "22",
+      "notes": []
+    }
+  ],
+  "status": "PUBLISHED"
+}
