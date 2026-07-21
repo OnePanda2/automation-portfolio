@@ -1,0 +1,204 @@
+﻿{
+  "name": "05. Territory Routing",
+  "type": "SHARED",
+  "summary": "",
+  "description": "",
+  "tags": [],
+  "blogUrl": "",
+  "metadata": {
+    "externalId": "0nAIR95GZECW8n54VDUW2"
+  },
+  "author": "Siddesh thapa",
+  "categories": [],
+  "pieces": [
+    "@activepieces/piece-webhook",
+    "@activepieces/piece-airtable",
+    "@activepieces/piece-http"
+  ],
+  "flows": [
+    {
+      "displayName": "05. Territory Routing",
+      "trigger": {
+        "name": "trigger",
+        "valid": true,
+        "displayName": "catch_webhook",
+        "nextAction": {
+          "name": "step_1",
+          "type": "PIECE",
+          "valid": true,
+          "settings": {
+            "input": {
+              "url": {
+                "url": "/appiZqOV3LInYTKrr/tblwgewkSPWMaZpmK"
+              },
+              "auth": "{{connections['ebIpUp8C8ZOY22rHmCNDv']}}",
+              "body": {},
+              "method": "GET",
+              "headers": {},
+              "failsafe": false,
+              "body_type": "none",
+              "queryParams": {
+                "sort[0][field]": "Rule Order",
+                "filterByFormula": "{Active}=TRUE()",
+                "sort[0][direction]": "asc"
+              },
+              "followRedirects": false,
+              "response_is_binary": false
+            },
+            "pieceName": "@activepieces/piece-airtable",
+            "actionName": "custom_api_call",
+            "pieceVersion": "0.6.10",
+            "propertySettings": {},
+            "errorHandlingOptions": {
+              "retryOnFailure": {
+                "value": false
+              },
+              "continueOnFailure": {
+                "value": false
+              }
+            }
+          },
+          "nextAction": {
+            "name": "step_2",
+            "type": "CODE",
+            "valid": true,
+            "settings": {
+              "input": {
+                "crmRecord": "{{trigger['output'].body.crmRecord}}",
+                "rulesResponse": "{{step_1['output']}}"
+              },
+              "sourceCode": {
+                "code": "// Adapted from repo design: original mapped condition_field 'location' to a\n// Location field; our CRM has Country instead, so 'location' reads Country.\nfunction getFieldValue(record, fieldName) {\n  const map = {\n    company_size: () => Number(record.fields?.['Company Size']) || 0,\n    location: () => (record.fields?.Country ?? '').toLowerCase(),\n  };\n  return map[fieldName] ? map[fieldName]() : null;\n}\n\nfunction ruleMatches(rule, record) {\n  const value = getFieldValue(record, rule.condition_field);\n  if (value === null) return false;\n\n  switch (rule.condition_op) {\n    case 'gt':\n      return value > Number(rule.condition_value);\n    case 'equals':\n      // NOTE: the original repo code used .includes() for both 'equals' and\n      // 'contains', making them behave identically — that looked like a bug,\n      // so 'equals' does an exact match here instead.\n      return String(value).toLowerCase() === rule.condition_value.toLowerCase();\n    case 'contains':\n      return String(value).includes(rule.condition_value.toLowerCase());\n    case 'in':\n      return rule.condition_value.split(',').map(v => v.trim().toLowerCase()).includes(String(value));\n    default:\n      return false;\n  }\n}\n\nexport const code = async (inputs) => {\n  const { crmRecord, rulesResponse } = inputs;\n  const rawRules = rulesResponse?.body?.records || [];\n\n  const rules = rawRules.map(r => ({\n    ruleOrder: r.fields['Rule Order'],\n    condition_field: r.fields['Condition Field'],\n    condition_op: r.fields['Condition Op'],\n    condition_value: r.fields['Condition Value'],\n    territory: r.fields['Territory'],\n    rep_pool: r.fields['Rep Pool'],\n  }));\n\n  const sortedRules = [...rules].sort((a, b) => a.ruleOrder - b.ruleOrder);\n\n  for (const rule of sortedRules) {\n    if (ruleMatches(rule, crmRecord)) {\n      return {\n        recordId: crmRecord.id,\n        territory: rule.territory,\n        repPool: rule.rep_pool,\n        matchedRule: `${rule.condition_field} ${rule.condition_op} ${rule.condition_value}`,\n      };\n    }\n  }\n\n  // No rule matched — default fallback, nothing goes unrouted.\n  return {\n    recordId: crmRecord.id,\n    territory: 'unassigned',\n    repPool: 'sdr_pool',\n    matchedRule: null,\n  };\n};",
+                "packageJson": "{}"
+              },
+              "errorHandlingOptions": {
+                "retryOnFailure": {
+                  "value": false
+                },
+                "continueOnFailure": {
+                  "value": false
+                }
+              }
+            },
+            "nextAction": {
+              "name": "step_3",
+              "type": "PIECE",
+              "valid": true,
+              "settings": {
+                "input": {
+                  "url": {
+                    "url": "/appmDDdJrwOMI9X4m/tblQp36EpW9TJSfvt/{{step_2['output'].recordId}}"
+                  },
+                  "auth": "{{connections['ebIpUp8C8ZOY22rHmCNDv']}}",
+                  "body": {
+                    "data": {
+                      "fields": {
+                        "Territory": "{{step_2['output'].territory}}",
+                        "Assigned Rep": "{{step_2['output'].repPool}}"
+                      },
+                      "typecast": true
+                    }
+                  },
+                  "method": "PATCH",
+                  "headers": {},
+                  "failsafe": false,
+                  "body_type": "json",
+                  "queryParams": {},
+                  "followRedirects": false,
+                  "response_is_binary": false
+                },
+                "pieceName": "@activepieces/piece-airtable",
+                "actionName": "custom_api_call",
+                "pieceVersion": "0.6.10",
+                "propertySettings": {},
+                "errorHandlingOptions": {
+                  "retryOnFailure": {
+                    "value": false
+                  },
+                  "continueOnFailure": {
+                    "value": false
+                  }
+                }
+              },
+              "nextAction": {
+                "name": "step_4",
+                "type": "PIECE",
+                "valid": true,
+                "settings": {
+                  "input": {
+                    "url": "https://cloud.activepieces.com/api/v1/webhooks/H40nVdWFX5MZIGFwHiXKZ",
+                    "body": {
+                      "data": {
+                        "repPool": "{{step_2['output'].repPool}}",
+                        "crmRecord": {
+                          "fields": "{{step_3['output'].body.fields}}",
+                          "recordId": "{{step_2['output'].recordId}}"
+                        },
+                        "territory": "{{step_2['output'].territory}}"
+                      }
+                    },
+                    "method": "POST",
+                    "headers": {
+                      "Content-Type": "application/json"
+                    },
+                    "authType": "NONE",
+                    "body_type": "json",
+                    "use_proxy": false,
+                    "authFields": {},
+                    "failureMode": "continue_all",
+                    "queryParams": {},
+                    "proxy_settings": {},
+                    "followRedirects": false,
+                    "response_is_binary": false
+                  },
+                  "pieceName": "@activepieces/piece-http",
+                  "actionName": "send_request",
+                  "pieceVersion": "0.11.10",
+                  "propertySettings": {},
+                  "errorHandlingOptions": {
+                    "retryOnFailure": {
+                      "value": false
+                    },
+                    "continueOnFailure": {
+                      "value": false
+                    }
+                  }
+                },
+                "displayName": "Cascade → Flow 6 (Slack Notification)",
+                "lastUpdatedDate": "2026-07-20T13:15:59.904Z"
+              },
+              "displayName": "Update CRM with territory + assigned rep pool",
+              "lastUpdatedDate": "2026-07-20T13:15:59.904Z"
+            },
+            "displayName": "Evaluate routing rules, first match wins",
+            "lastUpdatedDate": "2026-07-20T13:15:59.904Z"
+          },
+          "displayName": "Fetch active territory rules (ordered)",
+          "lastUpdatedDate": "2026-07-20T13:15:59.904Z"
+        },
+        "lastUpdatedDate": "2026-07-20T13:16:00.028Z",
+        "type": "PIECE_TRIGGER",
+        "settings": {
+          "sampleData": {},
+          "propertySettings": {
+            "authFields": {
+              "type": "MANUAL",
+              "schema": {}
+            }
+          },
+          "pieceName": "@activepieces/piece-webhook",
+          "pieceVersion": "0.1.36",
+          "triggerName": "catch_webhook",
+          "input": {
+            "authType": "none",
+            "authFields": {}
+          }
+        }
+      },
+      "valid": true,
+      "schemaVersion": "22",
+      "notes": []
+    }
+  ],
+  "status": "PUBLISHED"
+}

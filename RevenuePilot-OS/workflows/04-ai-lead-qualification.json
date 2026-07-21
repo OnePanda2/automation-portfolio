@@ -1,0 +1,152 @@
+﻿{
+  "name": "04. AI Lead Qualification",
+  "type": "SHARED",
+  "summary": "",
+  "description": "",
+  "tags": [],
+  "blogUrl": "",
+  "metadata": {
+    "externalId": "GzfuuV0qGVbVDMx4luJdE"
+  },
+  "author": "Siddesh thapa",
+  "categories": [],
+  "pieces": [
+    "@activepieces/piece-webhook",
+    "@activepieces/piece-airtable",
+    "@activepieces/piece-http"
+  ],
+  "flows": [
+    {
+      "displayName": "04. AI Lead Qualification",
+      "trigger": {
+        "name": "trigger",
+        "valid": true,
+        "displayName": "catch_webhook",
+        "nextAction": {
+          "name": "step_1",
+          "type": "CODE",
+          "valid": true,
+          "settings": {
+            "input": {
+              "crmRecord": "{{trigger['output'].body.crmRecord}}",
+              "openaiApiKey": "YOUR_OPENAI_API_KEY_HERE"
+            },
+            "sourceCode": {
+              "code": "const ICP_DEFINITION = `\nIdeal Customer Profile:\n- Company size: 20-2000 employees\n- Industry: SaaS, e-commerce, or professional services\n- Geography: India or United States\n- Signals of intent: filled out a demo/contact form (not a newsletter signup)\n`;\n\nfunction buildPrompt(record) {\n  const f = record.fields || {};\n  return `${ICP_DEFINITION}\n\nLead to evaluate:\n- Company: ${f.Company ?? 'unknown'}\n- Company size: ${f['Company Size'] ?? 'unknown'}\n- Industry: ${f.Industry ?? 'unknown'}\n- Country: ${f.Country ?? 'unknown'}\n- Source: ${f.Source ?? 'unknown'}\n\nReturn ONLY valid JSON (no markdown fences, no commentary) matching exactly:\n{\"score\": <0-100 integer>, \"priority\": \"<high|medium|low>\", \"reasoning\": \"<one sentence>\", \"persona\": \"<short label>\"}`;\n}\n\nasync function callOpenAI(prompt, apiKey, strict) {\n  const systemMsg = strict\n    ? 'You return ONLY raw valid JSON. No markdown code fences. No explanation text.'\n    : 'You are a B2B lead qualification assistant. Return valid JSON only.';\n\n  const response = await fetch('https://api.openai.com/v1/chat/completions', {\n    method: 'POST',\n    headers: {\n      'Content-Type': 'application/json',\n      Authorization: `Bearer ${apiKey}`,\n    },\n    body: JSON.stringify({\n      model: 'gpt-4o-mini',\n      messages: [\n        { role: 'system', content: systemMsg },\n        { role: 'user', content: prompt },\n      ],\n      temperature: 0.3,\n    }),\n  });\n\n  if (!response.ok) {\n    throw new Error(`OpenAI request failed: ${response.status}`);\n  }\n\n  const data = await response.json();\n  return data.choices?.[0]?.message?.content ?? '';\n}\n\nfunction tryParseJson(text) {\n  const cleaned = text.replace(/```json|```/g, '').trim();\n  try {\n    return JSON.parse(cleaned);\n  } catch {\n    return null;\n  }\n}\n\nexport const code = async (inputs) => {\n  const { crmRecord, openaiApiKey } = inputs;\n  const prompt = buildPrompt(crmRecord);\n\n  let raw, parsed;\n  try {\n    raw = await callOpenAI(prompt, openaiApiKey, false);\n    parsed = tryParseJson(raw);\n    if (!parsed) {\n      raw = await callOpenAI(prompt, openaiApiKey, true);\n      parsed = tryParseJson(raw);\n    }\n  } catch (err) {\n    // No real API key configured yet — this catch is EXPECTED to fire until one is added.\n    return {\n      recordId: crmRecord.id,\n      apiError: err.message,\n      fields: {\n        'Lead Score': 0,\n        Priority: 'medium',\n        'AI Reasoning': `AI scoring unavailable (${err.message}). Defaulted to medium priority for manual review. (Persona: unknown)`,\n      },\n    };\n  }\n\n  if (!parsed) {\n    return {\n      recordId: crmRecord.id,\n      fields: {\n        'Lead Score': 0,\n        Priority: 'medium',\n        'AI Reasoning': 'AI scoring failed to return valid JSON after retry; defaulted for manual review. (Persona: unknown)',\n      },\n    };\n  }\n\n  const score = Number(parsed.score) || 0;\n  const priority = ['high', 'medium', 'low'].includes(parsed.priority) ? parsed.priority : 'medium';\n  const reasoning = parsed.reasoning ?? '';\n  const persona = parsed.persona ?? 'unknown';\n\n  return {\n    recordId: crmRecord.id,\n    fields: {\n      'Lead Score': score,\n      Priority: priority,\n      'AI Reasoning': `${reasoning} (Persona: ${persona})`,\n    },\n  };\n};",
+              "packageJson": "{}"
+            },
+            "errorHandlingOptions": {
+              "retryOnFailure": {
+                "value": false
+              },
+              "continueOnFailure": {
+                "value": false
+              }
+            }
+          },
+          "nextAction": {
+            "name": "step_2",
+            "type": "PIECE",
+            "valid": true,
+            "settings": {
+              "input": {
+                "auth": "{{connections['ebIpUp8C8ZOY22rHmCNDv']}}",
+                "base": "appmDDdJrwOMI9X4m",
+                "fields": {
+                  "fld9DuwtxBcapOU0V": "{{step_1['output'].fields['AI Reasoning']}}",
+                  "fldYCQ9gyZVGgsvLC": "{{step_1['output'].fields.Priority}}",
+                  "fldqlKtiQIWrU9ana": "{{step_1['output'].fields['Lead Score']}}"
+                },
+                "tableId": "tblQp36EpW9TJSfvt",
+                "recordId": "{{step_1['output'].recordId}}"
+              },
+              "pieceName": "@activepieces/piece-airtable",
+              "actionName": "airtable_update_record",
+              "pieceVersion": "0.6.10",
+              "propertySettings": {},
+              "errorHandlingOptions": {
+                "retryOnFailure": {
+                  "value": false
+                },
+                "continueOnFailure": {
+                  "value": false
+                }
+              }
+            },
+            "nextAction": {
+              "name": "step_3",
+              "type": "PIECE",
+              "valid": true,
+              "settings": {
+                "input": {
+                  "url": "https://cloud.activepieces.com/api/v1/webhooks/2sfFLBwvI1YjJAeKzmL6P",
+                  "body": {
+                    "data": {
+                      "crmRecord": {
+                        "id": "{{step_2['output'].id}}",
+                        "fields": "{{step_2['output'].fields}}"
+                      }
+                    }
+                  },
+                  "method": "POST",
+                  "headers": {
+                    "Content-Type": "application/json"
+                  },
+                  "authType": "NONE",
+                  "body_type": "json",
+                  "use_proxy": false,
+                  "authFields": {},
+                  "failureMode": "continue_all",
+                  "queryParams": {},
+                  "proxy_settings": {},
+                  "followRedirects": false,
+                  "response_is_binary": false
+                },
+                "pieceName": "@activepieces/piece-http",
+                "actionName": "send_request",
+                "pieceVersion": "0.11.10",
+                "propertySettings": {},
+                "errorHandlingOptions": {
+                  "retryOnFailure": {
+                    "value": false
+                  },
+                  "continueOnFailure": {
+                    "value": false
+                  }
+                }
+              },
+              "displayName": "Cascade → Flow 5 (Territory Routing)",
+              "lastUpdatedDate": "2026-07-20T13:14:33.812Z"
+            },
+            "displayName": "Update CRM with score, priority, reasoning",
+            "lastUpdatedDate": "2026-07-20T13:14:33.812Z"
+          },
+          "displayName": "Score lead via OpenAI (PLACEHOLDER — needs real API key)",
+          "lastUpdatedDate": "2026-07-20T13:14:33.812Z"
+        },
+        "lastUpdatedDate": "2026-07-20T13:14:33.968Z",
+        "type": "PIECE_TRIGGER",
+        "settings": {
+          "sampleData": {},
+          "propertySettings": {
+            "authFields": {
+              "type": "MANUAL",
+              "schema": {}
+            }
+          },
+          "pieceName": "@activepieces/piece-webhook",
+          "pieceVersion": "0.1.36",
+          "triggerName": "catch_webhook",
+          "input": {
+            "authType": "none",
+            "authFields": {}
+          }
+        }
+      },
+      "valid": true,
+      "schemaVersion": "22",
+      "notes": []
+    }
+  ],
+  "status": "PUBLISHED"
+}

@@ -1,0 +1,62 @@
+{
+  "_meta": {
+    "workflow": "2. Duplicate Detection",
+    "source": "Real execution, Activepieces run fwOmwnbY2Wx57ZngY9h6h, captured 2026-07-20",
+    "note": "Captured from a live production run triggered by Flow 1's cascade, not hand-written."
+  },
+  "webhook_input": {
+    "lead": {
+      "email": "priya.shah@meridiananalytics.io",
+      "phone": "+919876543210",
+      "fullName": "Priya Shah",
+      "company": "Meridian Analytics",
+      "source": "website",
+      "capturedAt": "2026-07-20T12:32:57.264Z"
+    }
+  },
+  "find_existing_record_output": [],
+  "decide_create_or_update_output": {
+    "action": "create",
+    "recordId": null,
+    "mergedFields": {
+      "Email": "priya.shah@meridiananalytics.io",
+      "Phone": "+919876543210",
+      "Full Name": "Priya Shah",
+      "Company": "Meridian Analytics",
+      "Source": "website",
+      "Status": "New",
+      "Created At": "2026-07-20T12:32:57.264Z",
+      "Duplicate": false,
+      "Notes": "2026-07-20T12:32:57.264Z — created via website"
+    }
+  },
+  "airtable_create_output": {
+    "id": "recxfnwDxSaYBseM7",
+    "createdTime": "2026-07-20T12:33:06.000Z",
+    "fields": {
+      "Status": "New",
+      "Email": "priya.shah@meridiananalytics.io",
+      "Notes": "2026-07-20T12:32:57.264Z — created via website",
+      "Created At": "2026-07-20T12:32:57.264Z",
+      "Source": "website",
+      "Full Name": "Priya Shah",
+      "Phone": "+919876543210",
+      "Company": "Meridian Analytics"
+    }
+  },
+  "cascade_to_flow_3_body": {
+    "crmRecord": {
+      "id": "recxfnwDxSaYBseM7",
+      "fields": {
+        "Status": "New",
+        "Email": "priya.shah@meridiananalytics.io",
+        "Notes": "2026-07-20T12:32:57.264Z — created via website",
+        "Created At": "2026-07-20T12:32:57.264Z",
+        "Source": "website",
+        "Full Name": "Priya Shah",
+        "Phone": "+919876543210",
+        "Company": "Meridian Analytics"
+      }
+    }
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "_meta": {
+    "workflow": "1. Lead Capture Gateway",
+    "source": "Real execution, Activepieces run T12I3xXL9nNF6HFw29tW6, captured 2026-07-20",
+    "note": "Webhook input and step outputs captured verbatim from a live test run, not hand-written."
+  },
+  "webhook_input": {
+    "company": "Meridian Analytics",
+    "email": "priya.shah@meridiananalytics.io",
+    "name": "Priya Shah",
+    "phone": "+919876543210"
+  },
+  "normalize_and_validate_output": {
+    "valid": true,
+    "lead": {
+      "email": "priya.shah@meridiananalytics.io",
+      "phone": "+919876543210",
+      "fullName": "Priya Shah",
+      "company": "Meridian Analytics",
+      "source": "website",
+      "capturedAt": "2026-07-20T12:32:57.264Z"
+    },
+    "rejectionReason": null
+  },
+  "webhook_response": {
+    "status": 200,
+    "body": {
+      "lead": {
+        "email": "priya.shah@meridiananalytics.io",
+        "phone": "+919876543210",
+        "fullName": "Priya Shah",
+        "company": "Meridian Analytics",
+        "source": "website",
+        "capturedAt": "2026-07-20T12:32:57.264Z"
+      },
+      "status": "accepted"
+    }
+  }
+}

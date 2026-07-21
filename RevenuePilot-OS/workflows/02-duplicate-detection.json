@@ -1,0 +1,296 @@
+﻿{
+  "name": "02. Duplicate Detection",
+  "type": "SHARED",
+  "summary": "",
+  "description": "",
+  "tags": [],
+  "blogUrl": "",
+  "metadata": {
+    "externalId": "GAwpCGQxmtx5GBnqfu24H"
+  },
+  "author": "Siddesh thapa",
+  "categories": [],
+  "pieces": [
+    "@activepieces/piece-webhook",
+    "@activepieces/piece-airtable",
+    "@activepieces/piece-http"
+  ],
+  "flows": [
+    {
+      "displayName": "02. Duplicate Detection",
+      "trigger": {
+        "name": "trigger",
+        "valid": true,
+        "displayName": "catch_webhook",
+        "nextAction": {
+          "name": "step_1",
+          "type": "PIECE",
+          "valid": true,
+          "settings": {
+            "input": {
+              "auth": "{{connections['ebIpUp8C8ZOY22rHmCNDv']}}",
+              "base": "appmDDdJrwOMI9X4m",
+              "tableId": "tblQp36EpW9TJSfvt",
+              "searchField": "Email",
+              "searchValue": "{{trigger['output'].body.lead.email}}"
+            },
+            "pieceName": "@activepieces/piece-airtable",
+            "actionName": "airtable_find_record",
+            "pieceVersion": "0.6.10",
+            "propertySettings": {},
+            "errorHandlingOptions": {
+              "retryOnFailure": {
+                "value": false
+              },
+              "continueOnFailure": {
+                "value": false
+              }
+            }
+          },
+          "nextAction": {
+            "name": "step_2",
+            "type": "CODE",
+            "valid": true,
+            "settings": {
+              "input": {
+                "lead": "{{trigger['output'].body.lead}}",
+                "existing": "{{step_1['output']}}"
+              },
+              "sourceCode": {
+                "code": "export const code = async (inputs) => {\n  const { lead, existing } = inputs;\n\n  // airtable_find_record returns an array: [] when no match, [{id, fields}, ...] when found\n  const found = Array.isArray(existing) && existing.length > 0 ? existing[0] : null;\n\n  if (!found) {\n    return {\n      action: 'create',\n      recordId: null,\n      mergedFields: {\n        Email: lead.email,\n        Phone: lead.phone,\n        'Full Name': lead.fullName,\n        Company: lead.company,\n        Source: lead.source,\n        Status: 'New',\n        'Created At': lead.capturedAt,\n        Duplicate: false,\n        Notes: `${lead.capturedAt} — created via ${lead.source}`,\n      },\n    };\n  }\n\n  const existingFields = found.fields || {};\n  const priorNotes = existingFields.Notes || '';\n  const touchLine = `${lead.capturedAt} — resubmitted via ${lead.source}`;\n\n  return {\n    action: 'update',\n    recordId: found.id,\n    mergedFields: {\n      Email: lead.email ?? existingFields.Email,\n      Phone: lead.phone ?? existingFields.Phone,\n      'Full Name': lead.fullName ?? existingFields['Full Name'],\n      Company: lead.company ?? existingFields.Company,\n      Duplicate: true,\n      Notes: priorNotes ? `${priorNotes}\\n${touchLine}` : touchLine,\n    },\n  };\n};",
+                "packageJson": "{}"
+              },
+              "errorHandlingOptions": {
+                "retryOnFailure": {
+                  "value": false
+                },
+                "continueOnFailure": {
+                  "value": false
+                }
+              }
+            },
+            "nextAction": {
+              "name": "step_3",
+              "type": "ROUTER",
+              "valid": true,
+              "children": [
+                {
+                  "name": "step_4",
+                  "type": "PIECE",
+                  "valid": true,
+                  "settings": {
+                    "input": {
+                      "auth": "{{connections['ebIpUp8C8ZOY22rHmCNDv']}}",
+                      "base": "appmDDdJrwOMI9X4m",
+                      "fields": {
+                        "fld1Sb4Qn8gFHMtLk": "New",
+                        "fldIfwi0ufLof3Gtp": "{{step_2['output'].mergedFields.Email}}",
+                        "fldNZ8PYQpof4aEVz": "{{step_2['output'].mergedFields.Notes}}",
+                        "flddrVDIgh6hzEvwt": "{{step_2['output'].mergedFields['Created At']}}",
+                        "fldhstHuUA0mvEjNw": "{{step_2['output'].mergedFields.Source}}",
+                        "fldjP9MZtCrDIUUUX": "{{step_2['output'].mergedFields['Full Name']}}",
+                        "fldnMOLTHf2lt5qky": "{{step_2['output'].mergedFields.Phone}}",
+                        "fldpiImg5XFrSdfPp": false,
+                        "fldu4mXov4jxytwOg": "{{step_2['output'].mergedFields.Company}}"
+                      },
+                      "tableId": "tblQp36EpW9TJSfvt"
+                    },
+                    "pieceName": "@activepieces/piece-airtable",
+                    "actionName": "airtable_create_record",
+                    "pieceVersion": "0.6.10",
+                    "propertySettings": {},
+                    "errorHandlingOptions": {
+                      "retryOnFailure": {
+                        "value": false
+                      },
+                      "continueOnFailure": {
+                        "value": false
+                      }
+                    }
+                  },
+                  "nextAction": {
+                    "name": "step_6",
+                    "type": "PIECE",
+                    "valid": true,
+                    "settings": {
+                      "input": {
+                        "url": "https://cloud.activepieces.com/api/v1/webhooks/aqGXRHZanQVexNf12wEro",
+                        "body": {
+                          "data": {
+                            "crmRecord": {
+                              "id": "{{step_4['output'].id}}",
+                              "fields": "{{step_4['output'].fields}}"
+                            }
+                          }
+                        },
+                        "method": "POST",
+                        "headers": {
+                          "Content-Type": "application/json"
+                        },
+                        "authType": "NONE",
+                        "body_type": "json",
+                        "use_proxy": false,
+                        "authFields": {},
+                        "failureMode": "continue_all",
+                        "queryParams": {},
+                        "proxy_settings": {},
+                        "followRedirects": false,
+                        "response_is_binary": false
+                      },
+                      "pieceName": "@activepieces/piece-http",
+                      "actionName": "send_request",
+                      "pieceVersion": "0.11.10",
+                      "propertySettings": {},
+                      "errorHandlingOptions": {
+                        "retryOnFailure": {
+                          "value": false
+                        },
+                        "continueOnFailure": {
+                          "value": false
+                        }
+                      }
+                    },
+                    "displayName": "Cascade → Flow 3 (Lead Enrichment)",
+                    "lastUpdatedDate": "2026-07-20T01:45:15.746Z"
+                  },
+                  "displayName": "Create new CRM record",
+                  "lastUpdatedDate": "2026-07-20T01:45:15.588Z"
+                },
+                {
+                  "name": "step_5",
+                  "type": "PIECE",
+                  "valid": true,
+                  "settings": {
+                    "input": {
+                      "auth": "{{connections['ebIpUp8C8ZOY22rHmCNDv']}}",
+                      "base": "appmDDdJrwOMI9X4m",
+                      "fields": {
+                        "fldIfwi0ufLof3Gtp": "{{step_2['output'].mergedFields.Email}}",
+                        "fldNZ8PYQpof4aEVz": "{{step_2['output'].mergedFields.Notes}}",
+                        "fldjP9MZtCrDIUUUX": "{{step_2['output'].mergedFields['Full Name']}}",
+                        "fldnMOLTHf2lt5qky": "{{step_2['output'].mergedFields.Phone}}",
+                        "fldpiImg5XFrSdfPp": true,
+                        "fldu4mXov4jxytwOg": "{{step_2['output'].mergedFields.Company}}"
+                      },
+                      "tableId": "tblQp36EpW9TJSfvt",
+                      "recordId": "{{step_2['output'].recordId}}"
+                    },
+                    "pieceName": "@activepieces/piece-airtable",
+                    "actionName": "airtable_update_record",
+                    "pieceVersion": "0.6.10",
+                    "propertySettings": {},
+                    "errorHandlingOptions": {
+                      "retryOnFailure": {
+                        "value": false
+                      },
+                      "continueOnFailure": {
+                        "value": false
+                      }
+                    }
+                  },
+                  "nextAction": {
+                    "name": "step_7",
+                    "type": "PIECE",
+                    "valid": true,
+                    "settings": {
+                      "input": {
+                        "url": "https://cloud.activepieces.com/api/v1/webhooks/aqGXRHZanQVexNf12wEro",
+                        "body": {
+                          "data": {
+                            "crmRecord": {
+                              "id": "{{step_5['output'].id}}",
+                              "fields": "{{step_5['output'].fields}}"
+                            }
+                          }
+                        },
+                        "method": "POST",
+                        "headers": {
+                          "Content-Type": "application/json"
+                        },
+                        "authType": "NONE",
+                        "body_type": "json",
+                        "use_proxy": false,
+                        "authFields": {},
+                        "failureMode": "continue_all",
+                        "queryParams": {},
+                        "proxy_settings": {},
+                        "followRedirects": false,
+                        "response_is_binary": false
+                      },
+                      "pieceName": "@activepieces/piece-http",
+                      "actionName": "send_request",
+                      "pieceVersion": "0.11.10",
+                      "propertySettings": {},
+                      "errorHandlingOptions": {
+                        "retryOnFailure": {
+                          "value": false
+                        },
+                        "continueOnFailure": {
+                          "value": false
+                        }
+                      }
+                    },
+                    "displayName": "Cascade → Flow 3 (Lead Enrichment)",
+                    "lastUpdatedDate": "2026-07-20T01:45:19.354Z"
+                  },
+                  "displayName": "Update existing CRM record",
+                  "lastUpdatedDate": "2026-07-20T01:45:15.588Z"
+                }
+              ],
+              "settings": {
+                "branches": [
+                  {
+                    "branchName": "Create new record",
+                    "branchType": "CONDITION",
+                    "conditions": [
+                      [
+                        {
+                          "operator": "TEXT_EXACTLY_MATCHES",
+                          "firstValue": "{{step_2['output'].action}}",
+                          "secondValue": "create"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "branchName": "Update existing record",
+                    "branchType": "FALLBACK"
+                  }
+                ],
+                "executionType": "EXECUTE_FIRST_MATCH"
+              },
+              "displayName": "Route by action",
+              "lastUpdatedDate": "2026-07-20T01:45:15.587Z"
+            },
+            "displayName": "Determine create vs update + merge fields",
+            "lastUpdatedDate": "2026-07-20T01:45:15.587Z"
+          },
+          "displayName": "Search CRM by email",
+          "lastUpdatedDate": "2026-07-20T01:45:15.587Z"
+        },
+        "lastUpdatedDate": "2026-07-20T01:45:15.586Z",
+        "type": "PIECE_TRIGGER",
+        "settings": {
+          "sampleData": {},
+          "propertySettings": {
+            "authFields": {
+              "type": "MANUAL",
+              "schema": {}
+            }
+          },
+          "pieceName": "@activepieces/piece-webhook",
+          "pieceVersion": "0.1.36",
+          "triggerName": "catch_webhook",
+          "input": {
+            "authType": "none",
+            "authFields": {}
+          }
+        }
+      },
+      "valid": true,
+      "schemaVersion": "22",
+      "notes": []
+    }
+  ],
+  "status": "PUBLISHED"
+}

@@ -1,0 +1,49 @@
+{
+  "_meta": {
+    "workflow": "4. AI Lead Qualification",
+    "source": "Real execution, Activepieces run a0jdcVeOLELbRvqjh80RV, captured 2026-07-20",
+    "note": "Captured from a live production run. The OpenAI call fails with 401 here because this deployment runs with a placeholder key — this is the expected, tested fallback path."
+  },
+  "webhook_input": {
+    "crmRecord": {
+      "id": "recxfnwDxSaYBseM7",
+      "fields": {
+        "Status": "New",
+        "Enrichment Incomplete": true,
+        "Email": "priya.shah@meridiananalytics.io",
+        "Full Name": "Priya Shah",
+        "Company": "Meridian Analytics",
+        "Phone": "+919876543210",
+        "Source": "website",
+        "Created At": "2026-07-20T12:32:57.264Z"
+      }
+    }
+  },
+  "ai_scoring_step_output": {
+    "recordId": "recxfnwDxSaYBseM7",
+    "apiError": "OpenAI request failed: 401",
+    "fields": {
+      "Lead Score": 0,
+      "Priority": "medium",
+      "AI Reasoning": "AI scoring unavailable (OpenAI request failed: 401). Defaulted to medium priority for manual review. (Persona: unknown)"
+    }
+  },
+  "cascade_to_flow_5_body": {
+    "crmRecord": {
+      "id": "recxfnwDxSaYBseM7",
+      "fields": {
+        "Status": "New",
+        "Enrichment Incomplete": true,
+        "AI Reasoning": "AI scoring unavailable (OpenAI request failed: 401). Defaulted to medium priority for manual review. (Persona: unknown)",
+        "Email": "priya.shah@meridiananalytics.io",
+        "Priority": "medium",
+        "Full Name": "Priya Shah",
+        "Company": "Meridian Analytics",
+        "Phone": "+919876543210",
+        "Lead Score": 0,
+        "Source": "website",
+        "Created At": "2026-07-20T12:32:57.264Z"
+      }
+    }
+  }
+}

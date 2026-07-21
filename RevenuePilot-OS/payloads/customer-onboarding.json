@@ -1,0 +1,54 @@
+{
+  "_meta": {
+    "workflow": "7. Customer Onboarding",
+    "source": "Real execution, Activepieces run 0b0FAytZONrRamc5KQCA5, captured 2026-07-20",
+    "note": "Captured from a live test run (mock trigger data supplied to a real webhook — see note below on real vs. mock triggers). Every downstream step (Airtable writes, Gmail send, Slack post) executed for real."
+  },
+  "webhook_input": {
+    "crmRecord": {
+      "fields": {
+        "Company": "Meridian Analytics",
+        "Email": "priya.shah@meridiananalytics.io",
+        "Full Name": "Priya Shah"
+      },
+      "id": "recxfnwDxSaYBseM7"
+    }
+  },
+  "create_checklist_row_output": {
+    "id": "reclJWIqkGHSJgMr1",
+    "fields": {
+      "Created At": "2026-07-20T12:33:58.927Z",
+      "Lead Record ID": "recxfnwDxSaYBseM7",
+      "Company": "Meridian Analytics"
+    }
+  },
+  "fetch_csm_pool_output": {
+    "records": [
+      { "id": "recNBiU9qex1NycCQ", "fields": { "Name": "Priya Nair", "Email": "priya@revenuepilot.example", "Open Onboardings": 2, "Active": true } },
+      { "id": "recOYNyunljARaKUP", "fields": { "Name": "Aisha Khan", "Email": "aisha@revenuepilot.example", "Open Onboardings": 4, "Active": true } }
+    ]
+  },
+  "round_robin_assign_output": {
+    "assignedCsmEmail": "priya@revenuepilot.example",
+    "assignedCsmName": "Priya Nair",
+    "assignedCsmRecordId": "recNBiU9qex1NycCQ",
+    "newOpenCount": 3
+  },
+  "final_crm_update_output": {
+    "id": "recxfnwDxSaYBseM7",
+    "fields": {
+      "Status": "In progress",
+      "Territory": "unassigned",
+      "Assigned Rep": "Priya Nair",
+      "Priority": "medium",
+      "Lead Score": 0,
+      "Email": "priya.shah@meridiananalytics.io",
+      "Full Name": "Priya Shah",
+      "Company": "Meridian Analytics",
+      "Assigned CSM": "Priya Nair"
+    }
+  },
+  "slack_announcement_output": {
+    "text": ":tada: New customer onboarded\nCompany: Meridian Analytics\nCustomer: Priya Shah\nAssigned CSM: Priya Nair\nStatus: Onboarding started\nChecklist Created: ✅\nWelcome Email Sent: ✅"
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "_meta": {
+    "workflow": "8. Weekly Executive Report",
+    "source": "Example Payload — inferred from workflow logic and schema, not a clean captured execution",
+    "note": "This workflow was tested directly by the project owner rather than captured step-by-step in this session, and the one execution inspected during debugging returned stale cached step data (a known Activepieces testing quirk, not a workflow bug). Shape below reflects the actual field mapping and computed-metrics logic as built."
+  },
+  "trigger": {
+    "type": "schedule",
+    "cron_equivalent": "every Monday 08:00 Asia/Kolkata"
+  },
+  "compute_metrics_output": {
+    "week_start": "2026-07-13",
+    "week_end": "2026-07-19",
+    "leads_count": 1,
+    "mqls_count": 0,
+    "sqls_count": 0,
+    "conversion_rate": 0,
+    "revenue": 0,
+    "lost_deals": 0
+  },
+  "ai_summary_fallback_example": "(AI summary unavailable: OpenAI summary request failed: 401. Raw metrics below.)",
+  "archive_record_example": {
+    "Week Start": "2026-07-13",
+    "Week End": "2026-07-19",
+    "Leads Count": 1,
+    "MQLs Count": 0,
+    "SQLs Count": 0,
+    "Conversion Rate": 0,
+    "Revenue": 0,
+    "Lost Deals": 0,
+    "AI Summary": "(AI summary unavailable: OpenAI summary request failed: 401. Raw metrics below.)",
+    "Created At": "2026-07-20T07:31:54.000Z"
+  }
+}

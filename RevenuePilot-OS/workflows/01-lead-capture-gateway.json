@@ -1,0 +1,211 @@
+﻿{
+  "name": "01. Lead Capture Gateway",
+  "type": "SHARED",
+  "summary": "",
+  "description": "",
+  "tags": [],
+  "blogUrl": "",
+  "metadata": {
+    "externalId": "BL2EdjbX9Pd7fNBgvsDbX"
+  },
+  "author": "Siddesh thapa",
+  "categories": [],
+  "pieces": [
+    "@activepieces/piece-webhook",
+    "@activepieces/piece-http"
+  ],
+  "flows": [
+    {
+      "displayName": "01. Lead Capture Gateway",
+      "trigger": {
+        "name": "trigger",
+        "valid": true,
+        "displayName": "catch_webhook",
+        "nextAction": {
+          "name": "step_1",
+          "type": "CODE",
+          "valid": true,
+          "settings": {
+            "input": {
+              "webhookBody": "{{trigger['output'].body}}"
+            },
+            "sampleData": {},
+            "sourceCode": {
+              "code": "const DISPOSABLE_DOMAINS = new Set([\n  'mailinator.com', 'guerrillamail.com', 'tempmail.com', '10minutemail.com'\n]);\n\nfunction detectSource(body) {\n  if (body?.form_response?.answers) return 'typeform';\n  if (body?.data && body?.eventId) return 'tally';\n  if (body?.properties && body?.objectId) return 'hubspot';\n  if (body?.source === 'manual') return 'manual';\n  return 'website';\n}\n\nfunction extractTypeform(body) {\n  const answers = body.form_response.answers || [];\n  const get = (ref) => answers.find(a => a.field?.ref === ref);\n  return {\n    email: get('email')?.email ?? null,\n    phone: get('phone')?.phone_number ?? null,\n    fullName: get('name')?.text ?? null,\n    company: get('company')?.text ?? null,\n  };\n}\n\nfunction extractHubSpot(body) {\n  const p = body.properties || {};\n  return {\n    email: p.email?.value ?? null,\n    phone: p.phone?.value ?? null,\n    fullName: p.full_name?.value ?? null,\n    company: p.company?.value ?? null,\n  };\n}\n\nfunction extractFlat(body) {\n  return {\n    email: body.email ?? null,\n    phone: body.phone ?? null,\n    fullName: body.name ?? body.full_name ?? null,\n    company: body.company ?? null,\n  };\n}\n\nfunction isValidEmail(email) {\n  if (!email) return false;\n  const regex = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;\n  if (!regex.test(email)) return false;\n  const domain = email.split('@')[1]?.toLowerCase();\n  return !DISPOSABLE_DOMAINS.has(domain);\n}\n\nfunction isValidPhone(phone) {\n  if (!phone) return true;\n  const digits = phone.replace(/\\D/g, '');\n  return digits.length >= 7 && digits.length <= 15;\n}\n\nexport const code = async (inputs) => {\n  const webhookBody = inputs.webhookBody || {};\n  const source = detectSource(webhookBody);\n\n  let extracted;\n  switch (source) {\n    case 'typeform': extracted = extractTypeform(webhookBody); break;\n    case 'hubspot':  extracted = extractHubSpot(webhookBody); break;\n    default:         extracted = extractFlat(webhookBody); break;\n  }\n\n  const lead = {\n    email: extracted.email?.trim().toLowerCase() ?? null,\n    phone: extracted.phone?.trim() ?? null,\n    fullName: extracted.fullName?.trim() ?? null,\n    company: extracted.company?.trim() ?? null,\n    source,\n    capturedAt: new Date().toISOString(),\n  };\n\n  if (!isValidEmail(lead.email)) {\n    return { valid: false, lead: null, rejectionReason: 'invalid_or_disposable_email' };\n  }\n  if (!lead.fullName || !lead.company) {\n    return { valid: false, lead: null, rejectionReason: 'missing_required_field' };\n  }\n  if (!isValidPhone(lead.phone)) {\n    return { valid: false, lead: null, rejectionReason: 'invalid_phone' };\n  }\n\n  return { valid: true, lead, rejectionReason: null };\n};",
+              "packageJson": "{}"
+            },
+            "errorHandlingOptions": {
+              "retryOnFailure": {
+                "value": false
+              },
+              "continueOnFailure": {
+                "value": false
+              }
+            }
+          },
+          "nextAction": {
+            "name": "step_2",
+            "type": "ROUTER",
+            "valid": true,
+            "children": [
+              {
+                "name": "step_3",
+                "type": "PIECE",
+                "valid": true,
+                "settings": {
+                  "input": {
+                    "fields": {
+                      "body": {
+                        "lead": "{{step_1['output'].lead}}",
+                        "status": "accepted"
+                      },
+                      "status": 200
+                    },
+                    "responseType": "json"
+                  },
+                  "pieceName": "@activepieces/piece-webhook",
+                  "actionName": "return_response",
+                  "sampleData": {},
+                  "pieceVersion": "0.1.36",
+                  "propertySettings": {},
+                  "errorHandlingOptions": {
+                    "retryOnFailure": {
+                      "value": false
+                    },
+                    "continueOnFailure": {
+                      "value": false
+                    }
+                  }
+                },
+                "nextAction": {
+                  "name": "step_5",
+                  "type": "PIECE",
+                  "valid": true,
+                  "settings": {
+                    "input": {
+                      "url": "https://cloud.activepieces.com/api/v1/webhooks/IjiDq92d6XKoxdEcQhlya",
+                      "body": {
+                        "data": {
+                          "lead": "{{step_1['output'].lead}}"
+                        }
+                      },
+                      "method": "POST",
+                      "headers": {
+                        "Content-Type": "application/json"
+                      },
+                      "authType": "NONE",
+                      "body_type": "json",
+                      "use_proxy": false,
+                      "authFields": {},
+                      "failureMode": "continue_all",
+                      "queryParams": {},
+                      "proxy_settings": {},
+                      "followRedirects": false,
+                      "response_is_binary": false
+                    },
+                    "pieceName": "@activepieces/piece-http",
+                    "actionName": "send_request",
+                    "pieceVersion": "0.11.10",
+                    "propertySettings": {},
+                    "errorHandlingOptions": {
+                      "retryOnFailure": {
+                        "value": false
+                      },
+                      "continueOnFailure": {
+                        "value": false
+                      }
+                    }
+                  },
+                  "displayName": "Cascade → Flow 2 (Duplicate Detection)",
+                  "lastUpdatedDate": "2026-07-20T01:46:06.602Z"
+                },
+                "displayName": "Respond: lead accepted",
+                "lastUpdatedDate": "2026-07-20T01:46:06.601Z"
+              },
+              {
+                "name": "step_4",
+                "type": "PIECE",
+                "valid": true,
+                "settings": {
+                  "input": {
+                    "fields": {
+                      "body": {
+                        "reason": "{{step_1['output'].rejectionReason}}",
+                        "status": "rejected"
+                      },
+                      "status": 200
+                    },
+                    "responseType": "json"
+                  },
+                  "pieceName": "@activepieces/piece-webhook",
+                  "actionName": "return_response",
+                  "sampleData": {},
+                  "pieceVersion": "0.1.36",
+                  "propertySettings": {},
+                  "errorHandlingOptions": {
+                    "retryOnFailure": {
+                      "value": false
+                    },
+                    "continueOnFailure": {
+                      "value": false
+                    }
+                  }
+                },
+                "displayName": "Respond: lead rejected",
+                "lastUpdatedDate": "2026-07-20T01:46:06.602Z"
+              }
+            ],
+            "settings": {
+              "branches": [
+                {
+                  "branchName": "Valid lead",
+                  "branchType": "CONDITION",
+                  "conditions": [
+                    [
+                      {
+                        "operator": "BOOLEAN_IS_TRUE",
+                        "firstValue": "{{step_1['output'].valid}}"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "branchName": "Otherwise",
+                  "branchType": "FALLBACK"
+                }
+              ],
+              "sampleData": {},
+              "executionType": "EXECUTE_FIRST_MATCH"
+            },
+            "displayName": "Route by validity",
+            "lastUpdatedDate": "2026-07-20T01:46:06.596Z"
+          },
+          "displayName": "Normalize & Validate Lead",
+          "lastUpdatedDate": "2026-07-20T01:46:06.596Z"
+        },
+        "lastUpdatedDate": "2026-07-20T01:46:06.595Z",
+        "type": "PIECE_TRIGGER",
+        "settings": {
+          "sampleData": {},
+          "propertySettings": {
+            "authFields": {
+              "type": "MANUAL",
+              "schema": {}
+            }
+          },
+          "pieceName": "@activepieces/piece-webhook",
+          "pieceVersion": "0.1.36",
+          "triggerName": "catch_webhook",
+          "input": {
+            "authType": "none",
+            "authFields": {}
+          }
+        }
+      },
+      "valid": true,
+      "schemaVersion": "22",
+      "notes": []
+    }
+  ],
+  "status": "PUBLISHED"
+}

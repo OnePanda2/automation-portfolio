@@ -1,0 +1,40 @@
+{
+  "_meta": {
+    "workflow": "9. Error Monitoring",
+    "source": "Real execution, Activepieces run RtdiTbMmaLlvlkEo2J7I8, captured 2026-07-20",
+    "note": "Captured from a live test run simulating a downstream workflow's failure being reported in. All downstream actions (Airtable log, Slack alert, Gmail escalation) executed for real."
+  },
+  "webhook_input": {
+    "flowName": "03-lead-enrichment",
+    "stepName": "call-enrichment-api",
+    "error": { "message": "Enrichment vendor timeout", "name": "TimeoutError" },
+    "payload": { "email": "priya.shah@meridiananalytics.io", "leadId": "recxfnwDxSaYBseM7" },
+    "retryCount": 3
+  },
+  "classify_failure_output": {
+    "flowName": "03-lead-enrichment",
+    "stepName": "call-enrichment-api",
+    "errorMessage": "Enrichment vendor timeout",
+    "retryCount": 3,
+    "createdAtIso": "2026-07-20T12:34:22.947Z",
+    "retryable": true,
+    "escalate": true
+  },
+  "airtable_log_output": {
+    "id": "recG2jUv9Fzney0hT",
+    "fields": {
+      "Flow Name": "03-lead-enrichment",
+      "Step Name": "call-enrichment-api",
+      "Error Message": "Enrichment vendor timeout",
+      "Payload": "{\"email\":\"priya.shah@meridiananalytics.io\",\"leadId\":\"recxfnwDxSaYBseM7\"}",
+      "Retry Count": 3,
+      "Created At": "2026-07-20T12:34:22.947Z"
+    }
+  },
+  "slack_alert_text": "🚨 *03-lead-enrichment* failed at step *call-enrichment-api*\n```Enrichment vendor timeout```\nRetryable: true | Escalate: true",
+  "escalation_email": {
+    "to": "admin@revenuepilot.example",
+    "subject": "[RevenuePilot] 03-lead-enrichment escalation",
+    "body": "call-enrichment-api failed permanently.\n\nFlow: 03-lead-enrichment\nError: Enrichment vendor timeout\nRetry Count: 3\n\nPayload:\n{\"email\":\"priya.shah@meridiananalytics.io\",\"leadId\":\"recxfnwDxSaYBseM7\"}"
+  }
+}

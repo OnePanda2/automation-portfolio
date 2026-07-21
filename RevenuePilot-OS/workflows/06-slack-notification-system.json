@@ -1,0 +1,118 @@
+﻿{
+  "name": "06. Slack Notification System",
+  "type": "SHARED",
+  "summary": "",
+  "description": "",
+  "tags": [],
+  "blogUrl": "",
+  "metadata": {
+    "externalId": "ntbdHkOPQ2UBezsoKW5mq"
+  },
+  "author": "Siddesh thapa",
+  "categories": [],
+  "pieces": [
+    "@activepieces/piece-webhook",
+    "@activepieces/piece-slack"
+  ],
+  "flows": [
+    {
+      "displayName": "06. Slack Notification System",
+      "trigger": {
+        "name": "trigger",
+        "valid": true,
+        "displayName": "catch_webhook",
+        "nextAction": {
+          "name": "step_1",
+          "type": "CODE",
+          "valid": true,
+          "settings": {
+            "input": {
+              "repPool": "{{trigger['output'].body.repPool}}",
+              "crmRecord": "{{trigger['output'].body.crmRecord}}",
+              "territory": "{{trigger['output'].body.territory}}"
+            },
+            "sampleData": {},
+            "sourceCode": {
+              "code": "// Adapted from repo: original used 'ICP Score'/'ICP Reasoning' field names;\n// our CRM actually has 'Lead Score'/'AI Reasoning'. Channel names also\n// mapped to real workspace channel IDs (no #sales-leads/#founders-highlights/\n// #marketing-attribution channels exist yet):\n//   sales     -> #leads       (C0BFX7J46V7)\n//   founders  -> #automations (C0BFX7KJAC9)\n//   marketing -> #automations (C0BFX7KJAC9)\nconst CHANNELS = {\n  salesLeads: 'C0BFX7J46V7',\n  founders: 'C0BFX7KJAC9',\n  marketing: 'C0BFX7KJAC9',\n};\n\nconst HIGH_PRIORITY_THRESHOLD = 80;\n\nexport const code = async (inputs) => {\n  const { crmRecord, territory, repPool } = inputs;\n  const f = crmRecord.fields || {};\n  const messages = [];\n\n  const salesText =\n    `*New lead routed to ${repPool}*\\n` +\n    `*Company:* ${f.Company ?? 'Unknown'}\\n` +\n    `*Contact:* ${f['Full Name'] ?? 'Unknown'} <${f.Email ?? ''}>\\n` +\n    `*Lead Score:* ${f['Lead Score'] ?? 'N/A'} (${f.Priority ?? 'unscored'})\\n` +\n    `*Territory:* ${territory}\\n` +\n    `*Reasoning:* ${f['AI Reasoning'] ?? 'n/a'}`;\n\n  messages.push({ channel: CHANNELS.salesLeads, text: salesText });\n\n  const score = Number(f['Lead Score']) || 0;\n  if (score >= HIGH_PRIORITY_THRESHOLD) {\n    messages.push({\n      channel: CHANNELS.founders,\n      text: `🔥 *High-priority lead*: ${f.Company} (score ${score}) just routed to ${repPool}.`,\n    });\n  }\n\n  const attributableSource = ['website', 'typeform', 'tally'].includes(f.Source);\n  if (attributableSource) {\n    messages.push({\n      channel: CHANNELS.marketing,\n      text: `New ${f.Source} lead: ${f.Company} — attribution logged.`,\n    });\n  }\n\n  return { messages };\n};",
+              "packageJson": "{}"
+            },
+            "errorHandlingOptions": {
+              "retryOnFailure": {
+                "value": false
+              },
+              "continueOnFailure": {
+                "value": false
+              }
+            }
+          },
+          "nextAction": {
+            "name": "step_2",
+            "type": "LOOP_ON_ITEMS",
+            "valid": true,
+            "settings": {
+              "items": "{{step_1['output'].messages}}",
+              "sampleData": {}
+            },
+            "displayName": "Loop over messages to post",
+            "firstLoopAction": {
+              "name": "step_3",
+              "type": "PIECE",
+              "valid": true,
+              "settings": {
+                "input": {
+                  "auth": "{{connections['P5rLyWzV29TV94zcu6omH']}}",
+                  "text": "{{step_2['output'].item.text}}",
+                  "channel": "C0BFX7J46V7",
+                  "sendAsBot": true,
+                  "unfurlLinks": true,
+                  "replyBroadcast": false,
+                  "mentionOriginFlow": false
+                },
+                "pieceName": "@activepieces/piece-slack",
+                "actionName": "send_channel_message",
+                "sampleData": {},
+                "pieceVersion": "0.17.3",
+                "propertySettings": {},
+                "errorHandlingOptions": {
+                  "retryOnFailure": {
+                    "value": false
+                  },
+                  "continueOnFailure": {
+                    "value": false
+                  }
+                }
+              },
+              "displayName": "Post message to channel",
+              "lastUpdatedDate": "2026-07-20T12:51:03.205Z"
+            },
+            "lastUpdatedDate": "2026-07-20T12:34:55.505Z"
+          },
+          "displayName": "Build messages per audience",
+          "lastUpdatedDate": "2026-07-20T12:34:55.505Z"
+        },
+        "lastUpdatedDate": "2026-07-20T12:36:36.019Z",
+        "type": "PIECE_TRIGGER",
+        "settings": {
+          "sampleData": {},
+          "propertySettings": {
+            "authFields": {
+              "type": "MANUAL",
+              "schema": {}
+            }
+          },
+          "pieceName": "@activepieces/piece-webhook",
+          "pieceVersion": "0.1.36",
+          "triggerName": "catch_webhook",
+          "input": {
+            "authType": "none",
+            "authFields": {}
+          }
+        }
+      },
+      "valid": true,
+      "schemaVersion": "22",
+      "notes": []
+    }
+  ],
+  "status": "PUBLISHED"
+}

@@ -1,0 +1,47 @@
+{
+  "_meta": {
+    "workflow": "3. Lead Enrichment",
+    "source": "Real execution, Activepieces run IQdvPuAazsGlr7K9Vbkbf, captured 2026-07-20",
+    "note": "Captured from a live production run. The enrichment vendor call fails here because this deployment runs with a placeholder key — this is the expected, tested fallback path, not an error in the workflow."
+  },
+  "webhook_input": {
+    "crmRecord": {
+      "id": "recxfnwDxSaYBseM7",
+      "fields": {
+        "Status": "New",
+        "Email": "priya.shah@meridiananalytics.io",
+        "Full Name": "Priya Shah",
+        "Company": "Meridian Analytics",
+        "Phone": "+919876543210",
+        "Source": "website",
+        "Created At": "2026-07-20T12:32:57.264Z"
+      }
+    }
+  },
+  "extract_domain_output": {
+    "domain": "meridiananalytics.io"
+  },
+  "enrichment_api_call_output": {
+    "response": { "status": 500 }
+  },
+  "normalize_and_decide_output": {
+    "success": false,
+    "recordId": "recxfnwDxSaYBseM7",
+    "fields": { "Enrichment Incomplete": true }
+  },
+  "cascade_to_flow_4_body": {
+    "crmRecord": {
+      "id": "recxfnwDxSaYBseM7",
+      "fields": {
+        "Status": "New",
+        "Enrichment Incomplete": true,
+        "Email": "priya.shah@meridiananalytics.io",
+        "Full Name": "Priya Shah",
+        "Company": "Meridian Analytics",
+        "Phone": "+919876543210",
+        "Source": "website",
+        "Created At": "2026-07-20T12:32:57.264Z"
+      }
+    }
+  }
+}

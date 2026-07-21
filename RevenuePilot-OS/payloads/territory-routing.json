@@ -1,0 +1,53 @@
+{
+  "_meta": {
+    "workflow": "5. Territory Routing",
+    "source": "Real execution, Activepieces run voY2dPkb228UW5eqYu7HV, captured 2026-07-20",
+    "note": "Captured from a live production run. Falls back to unassigned/sdr_pool because Company Size and Country were never populated (enrichment vendor unavailable in this deployment)."
+  },
+  "webhook_input": {
+    "crmRecord": {
+      "id": "recxfnwDxSaYBseM7",
+      "fields": {
+        "Status": "New",
+        "Enrichment Incomplete": true,
+        "Priority": "medium",
+        "Lead Score": 0,
+        "Email": "priya.shah@meridiananalytics.io",
+        "Full Name": "Priya Shah",
+        "Company": "Meridian Analytics",
+        "Phone": "+919876543210"
+      }
+    }
+  },
+  "fetch_active_rules_output": {
+    "records": [
+      { "id": "rec0wzKlunwmRzx4p", "fields": { "Condition Field": "company_size", "Condition Op": "gt", "Condition Value": "1000", "Territory": "enterprise", "Rep Pool": "senior_ae", "Rule Order": 1, "Active": true } },
+      { "id": "recBFWVE09ps2TF7H", "fields": { "Condition Field": "location", "Condition Op": "equals", "Condition Value": "india", "Territory": "india", "Rep Pool": "india_sales", "Rule Order": 2, "Active": true } },
+      { "id": "recisFcdYoZJuWega", "fields": { "Condition Field": "location", "Condition Op": "equals", "Condition Value": "us", "Territory": "us", "Rep Pool": "us_sales", "Rule Order": 3, "Active": true } }
+    ]
+  },
+  "evaluate_rules_output": {
+    "recordId": "recxfnwDxSaYBseM7",
+    "territory": "unassigned",
+    "repPool": "sdr_pool",
+    "matchedRule": null
+  },
+  "cascade_to_flow_6_body": {
+    "crmRecord": {
+      "recordId": "recxfnwDxSaYBseM7",
+      "fields": {
+        "Status": "New",
+        "Territory": "unassigned",
+        "Assigned Rep": "sdr_pool",
+        "Priority": "medium",
+        "Lead Score": 0,
+        "Email": "priya.shah@meridiananalytics.io",
+        "Full Name": "Priya Shah",
+        "Company": "Meridian Analytics",
+        "Phone": "+919876543210"
+      }
+    },
+    "territory": "unassigned",
+    "repPool": "sdr_pool"
+  }
+}
