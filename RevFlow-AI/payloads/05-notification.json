@@ -1,0 +1,17 @@
+{
+  "_meta": {
+    "workflow": "5. Sales Notification",
+    "source": "Real execution against a live Activepieces instance, Airtable record recgyCqYQsdZ7VuxZ, captured 2026-07-30",
+    "note": "Slack message text captured verbatim from the workflow's configured template, populated with real lead data."
+  },
+  "trigger_query_params": {
+    "email": "renee.okoro@northgatesolutions.com"
+  },
+  "slack_message": {
+    "channel": "#leads",
+    "text": ":rotating_light: New lead routed to *Morgan Ellis* (AE)\n\n*Renee Okoro* — VP of Customer Success at *Northgate Solutions*\nPriority: *High* | Score: 95/100 | Segment: Enterprise\nEst. Deal Value: $60000\n\n_Renee is a VP of Customer Success at Northgate Solutions, a 700-employee B2B SaaS company that fits our core ICP perfectly. As a VP-level leader, she holds strong purchasing authority for customer support and success tooling, and the lead came through a high-intent referral channel. (Persona: VP of Customer Success)_"
+  },
+  "resulting_airtable_record_fields": {
+    "Status": "Notified"
+  }
+}

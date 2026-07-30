@@ -1,0 +1,42 @@
+{
+  "_meta": {
+    "workflow": "4. Lead Routing",
+    "source": "Two real executions against a live Activepieces instance, captured 2026-07-30",
+    "note": "Shows both branches: a High-priority lead routed directly to an AE by territory, and a Medium-priority lead routed via SDR round-robin."
+  },
+  "example_ae_path": {
+    "airtable_record": "recgyCqYQsdZ7VuxZ",
+    "trigger_input": { "priority": "High", "territory": "Enterprise", "email": "renee.okoro@northgatesolutions.com" },
+    "determine_assigned_rep_output": {
+      "assignedRep": "Morgan Ellis",
+      "assignedRepRole": "AE",
+      "dealValueEstimate": 60000
+    },
+    "resulting_airtable_record_fields": {
+      "Assigned Rep": "Morgan Ellis",
+      "Assigned Rep Role": "AE",
+      "Deal Value Estimate": 60000,
+      "Status": "Routed"
+    }
+  },
+  "example_sdr_path": {
+    "airtable_record": "rec3BUrZDDv40Y2JC",
+    "trigger_input": { "priority": "Medium", "territory": "Mid-Market", "email": "alex.kim@dataforgeinc.com" },
+    "determine_assigned_rep_output": {
+      "assignedRep": "Alex Rivera",
+      "assignedRepRole": "SDR",
+      "dealValueEstimate": 25000
+    },
+    "resulting_airtable_record_fields": {
+      "Assigned Rep": "Alex Rivera",
+      "Assigned Rep Role": "SDR",
+      "Deal Value Estimate": 25000,
+      "Status": "Routed"
+    }
+  },
+  "routing_logic_summary": {
+    "high_priority": "assigned to the AE who owns the lead's Territory (Enterprise → Morgan Ellis, Mid-Market → Casey Nguyen, SMB → Drew Whitfield)",
+    "medium_or_low_priority": "assigned via hash(email) % 5 across the 5-person SDR pool",
+    "deal_value_by_territory": { "Enterprise": 60000, "Mid-Market": 25000, "SMB": 8000 }
+  }
+}

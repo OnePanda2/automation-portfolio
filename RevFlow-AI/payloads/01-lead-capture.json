@@ -1,0 +1,46 @@
+{
+  "_meta": {
+    "workflow": "1. Lead Capture Gateway",
+    "source": "Real execution against a live Activepieces instance, Airtable record recgyCqYQsdZ7VuxZ, captured 2026-07-30",
+    "note": "Webhook input and the resulting Airtable record captured verbatim from a live test run, not hand-written."
+  },
+  "webhook_input": {
+    "company": "Northgate Solutions",
+    "companySize": "700",
+    "email": "renee.okoro@northgatesolutions.com",
+    "fullName": "Renee Okoro",
+    "industry": "SaaS",
+    "jobTitle": "VP of Customer Success",
+    "leadSource": "Referral"
+  },
+  "validate_and_normalize_output": {
+    "email": "renee.okoro@northgatesolutions.com",
+    "fullName": "Renee Okoro",
+    "company": "Northgate Solutions",
+    "jobTitle": "VP of Customer Success",
+    "companySize": "700",
+    "industry": "SaaS",
+    "leadSource": "Referral"
+  },
+  "resulting_airtable_record": {
+    "id": "recgyCqYQsdZ7VuxZ",
+    "fields": {
+      "Email": "renee.okoro@northgatesolutions.com",
+      "Full Name": "Renee Okoro",
+      "Company": "Northgate Solutions",
+      "Job Title": "VP of Customer Success",
+      "Lead Source": "Referral",
+      "Status": "New",
+      "Enrichment Status": "Pending"
+    }
+  },
+  "handoff_to_qualification": {
+    "method": "POST",
+    "url": "https://cloud.activepieces.com/api/v1/webhooks/{qualification-workflow-id}",
+    "queryParams": {
+      "email": "renee.okoro@northgatesolutions.com",
+      "companySize": "700",
+      "industry": "SaaS"
+    }
+  }
+}

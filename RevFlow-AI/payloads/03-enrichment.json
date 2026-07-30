@@ -1,0 +1,29 @@
+{
+  "_meta": {
+    "workflow": "3. Lead Enrichment",
+    "source": "Real execution against a live Activepieces instance, Airtable record recgyCqYQsdZ7VuxZ, captured 2026-07-30",
+    "note": "This project ships with a placeholder firmographic API key by design (see docs/setup.md), so every real execution takes the fail-open path shown here."
+  },
+  "trigger_query_params": {
+    "email": "renee.okoro@northgatesolutions.com"
+  },
+  "derive_domain_output": {
+    "domain": "northgatesolutions.com"
+  },
+  "enrichment_api_call": {
+    "url": "https://company.clearbit.com/v2/companies/find",
+    "queryParams": { "domain": "northgatesolutions.com" },
+    "auth": "placeholder bearer token — not a real Clearbit account",
+    "response_status": 401
+  },
+  "apply_enrichment_result_output": {
+    "enrichmentStatus": "Failed",
+    "companySize": null,
+    "industry": null
+  },
+  "resulting_airtable_record_fields": {
+    "Enrichment Status": "Failed",
+    "Status": "Enriched"
+  },
+  "note_on_fail_open_design": "The lead's Status still advances to 'Enriched' and continues to Routing even though the vendor call failed — enrichment is best-effort, not a gate. See docs/engineering-decisions.md#why-enrichment-fails-open-not-closed."
+}
