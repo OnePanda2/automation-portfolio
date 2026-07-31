@@ -7,6 +7,7 @@ Production-style automation projects built with Activepieces.
 | Project | Description | Stack |
 |---------|-------------|-------|
 | [RevenuePilot OS](./RevenuePilot-OS) 🚀 | Flagship project. 10-workflow B2B lead-to-cash automation system: capture, dedup, enrichment, AI scoring, territory routing, Slack alerts, onboarding, weekly AI reporting, error monitoring, and a natural-language revenue assistant. | Activepieces, Airtable, Slack, Gmail, OpenAI |
+| [RevFlow AI](./RevFlow-AI) | 6-workflow B2B lead-to-cash MVP: capture, AI qualification, enrichment, AE/SDR routing, Slack notification, and conditional opportunity creation. | Activepieces, Airtable, Slack, Activepieces AI |
 | [CRM Lead Capture](./crm-lead-capture) | Validates website leads, stores them in Airtable, and alerts Slack. | Activepieces, Airtable, Slack |
 
 ---

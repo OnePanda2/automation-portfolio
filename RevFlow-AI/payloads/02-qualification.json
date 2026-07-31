@@ -1,0 +1,39 @@
+{
+  "_meta": {
+    "workflow": "2. Lead Qualification (AI Scoring)",
+    "source": "Real execution against a live Activepieces instance, Airtable record recgyCqYQsdZ7VuxZ, captured 2026-07-30",
+    "note": "AI output and the resulting Airtable record captured verbatim from a live test run against Activepieces' built-in AI provider (google/gemini-3.5-flash-lite), not hand-written."
+  },
+  "trigger_query_params": {
+    "email": "renee.okoro@northgatesolutions.com",
+    "companySize": "700",
+    "industry": "SaaS"
+  },
+  "ai_scoring_output": {
+    "score": 95,
+    "reasoning": "Renee is a VP of Customer Success at Northgate Solutions, a 700-employee B2B SaaS company that fits our core ICP perfectly. As a VP-level leader, she holds strong purchasing authority for customer support and success tooling, and the lead came through a high-intent referral channel.",
+    "persona": "VP of Customer Success"
+  },
+  "business_rules_output": {
+    "score": 95,
+    "priority": "High",
+    "status": "Qualified",
+    "territory": "Enterprise",
+    "companySizeBucket": "500+",
+    "industry": "SaaS"
+  },
+  "resulting_airtable_record_fields": {
+    "Score": 95,
+    "Priority": "High",
+    "Status": "Qualified",
+    "Territory": "Enterprise",
+    "Company Size": "500+",
+    "Industry": "SaaS",
+    "AI Reasoning": "Renee is a VP of Customer Success at Northgate Solutions, a 700-employee B2B SaaS company that fits our core ICP perfectly. As a VP-level leader, she holds strong purchasing authority for customer support and success tooling, and the lead came through a high-intent referral channel. (Persona: VP of Customer Success)"
+  },
+  "counter_example_disqualified": {
+    "note": "A separate real test lead (junior title, small unrelated-fit company, cold source) scored 25 and was correctly marked Disqualified, stopping the pipeline before Enrichment.",
+    "score": 25,
+    "status": "Disqualified"
+  }
+}

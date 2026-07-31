@@ -1,0 +1,33 @@
+{
+  "_meta": {
+    "workflow": "6. Opportunity Creation",
+    "source": "Two real executions against a live Activepieces instance, captured 2026-07-30",
+    "note": "Shows both branches: an Opportunity record created for an AE-assigned lead, and the correct no-op for an SDR-assigned lead."
+  },
+  "example_opportunity_created": {
+    "airtable_lead_record": "recgyCqYQsdZ7VuxZ",
+    "trigger_input": { "email": "renee.okoro@northgatesolutions.com" },
+    "router_evaluation": { "assignedRepRole": "AE", "branch_taken": "Assigned to AE" },
+    "resulting_opportunity_record": {
+      "id": "reczfEKeUC52SKqv8",
+      "fields": {
+        "Opportunity Name": "Northgate Solutions - Renee Okoro",
+        "Lead Email": "renee.okoro@northgatesolutions.com",
+        "Lead Name": "Renee Okoro",
+        "Company": "Northgate Solutions",
+        "Deal Value": 60000,
+        "Stage": "Discovery",
+        "Owner": "Morgan Ellis",
+        "Expected Close Date": "2026-09-13"
+      }
+    },
+    "resulting_lead_status": "Opportunity"
+  },
+  "example_opportunity_correctly_skipped": {
+    "airtable_lead_record": "rec3BUrZDDv40Y2JC",
+    "trigger_input": { "email": "alex.kim@dataforgeinc.com" },
+    "router_evaluation": { "assignedRepRole": "SDR", "branch_taken": "Otherwise (no-op)" },
+    "opportunity_record_created": false,
+    "resulting_lead_status": "Notified"
+  }
+}
