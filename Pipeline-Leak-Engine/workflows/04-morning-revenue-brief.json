@@ -1,0 +1,149 @@
+{
+  "flowName": "Pipeline Leak Engine - M4 Morning Revenue Brief",
+  "flowId": "sCHrdeu9WylqtSuzuj60H",
+  "platform": "Activepieces",
+  "exportedVia": "Activepieces MCP API (ap_flow_structure / ap_read_step_settings) -- this is the real, live automation definition, not a mock",
+  "note": "Triggered by webhook in this repo for testability; in a live deployment this would be a daily Schedule trigger instead.",
+  "trigger": {
+    "name": "trigger",
+    "type": "PIECE_TRIGGER",
+    "displayName": "catch_webhook",
+    "piece": "@activepieces/piece-webhook",
+    "triggerName": "catch_webhook",
+    "input": {
+      "authType": "none"
+    },
+    "samplePayload": {
+      "body": {}
+    }
+  },
+  "steps": [
+    {
+      "name": "step_1",
+      "type": "PIECE",
+      "displayName": "1. Fetch CRM Health Score",
+      "piece": "@activepieces/piece-airtable",
+      "action": "airtable_get_record_by_id",
+      "parent": "trigger",
+      "relationship": "after",
+      "input": {
+        "base": "appEMu33dTfSQoThw",
+        "tableId": "tblrZKpPfzh3rfTzz",
+        "recordId": "rec98DhC1bwxrEzZq"
+      }
+    },
+    {
+      "name": "step_2",
+      "type": "PIECE",
+      "displayName": "2. Fetch Daily Brief Metrics",
+      "piece": "@activepieces/piece-airtable",
+      "action": "airtable_get_record_by_id",
+      "parent": "step_1",
+      "relationship": "after",
+      "input": {
+        "base": "apprhpyaCN6Dvz7hw",
+        "tableId": "tblYHgidxYRUJ9Yb5",
+        "recordId": "recWrxHffhyEWWWsP"
+      }
+    },
+    {
+      "name": "step_3",
+      "type": "CODE",
+      "displayName": "3. Deterministic Leakage Prevented Calculation",
+      "parent": "step_2",
+      "relationship": "after",
+      "sourceCode": "export const code = async (inputs) => {\n  const leadsRouted = Number(inputs.leadsRouted) || 0;\n  const atRiskValue = Number(inputs.atRiskValue) || 0;\n  const atRiskCount = Number(inputs.atRiskCount) || 0;\n  const healthScore = Number(inputs.healthScore) || 0;\n\n  // Illustrative, transparent methodology (documented in README, adjustable per client):\n  // - Assume $500 of protected pipeline value per lead routed in under 60s vs a slow manual process\n  // - Assume flagging an at-risk deal before the deal review recovers ~20% of its value on average\n  const fastRoutingValue = leadsRouted * 500;\n  const dealRescueValue = Math.round(atRiskValue * 0.20);\n  const leakagePrevented = fastRoutingValue + dealRescueValue;\n\n  return {\n    leadsRouted,\n    atRiskCount,\n    atRiskValue,\n    healthScore,\n    fastRoutingValue,\n    dealRescueValue,\n    leakagePrevented\n  };\n};",
+      "input": {
+        "leadsRouted": "{{step_2.fields.'Leads Routed Count'}}",
+        "atRiskCount": "{{step_2.fields.'Deals Flagged At Risk Count'}}",
+        "atRiskValue": "{{step_2.fields.'At-Risk Pipeline Value Caught'}}",
+        "healthScore": "{{step_1.fields.'Health Score'}}"
+      }
+    },
+    {
+      "name": "step_4",
+      "type": "PIECE",
+      "displayName": "4. AI Executive Summary Synthesis (placeholder key)",
+      "piece": "@activepieces/piece-http",
+      "action": "send_request",
+      "parent": "step_3",
+      "relationship": "after",
+      "continueOnFailure": true,
+      "input": {
+        "url": "https://api.openai.com/v1/chat/completions",
+        "method": "POST",
+        "authType": "NONE",
+        "body_type": "json",
+        "failureMode": "continue_all",
+        "headers": {
+          "Authorization": "Bearer PLACEHOLDER_OPENAI_API_KEY",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "model": "gpt-4o-mini",
+          "temperature": 0.4,
+          "messages": [
+            {
+              "role": "system",
+              "content": "You are a RevOps analyst writing a 3-4 sentence morning brief for a VP of Sales. Be plain-English, confident, and specific with numbers. Cover: what happened overnight (leads routed, CRM health), what needs attention today (at-risk deals), and close with the leakage-prevented dollar figure as the headline takeaway."
+            },
+            {
+              "role": "user",
+              "content": "Leads routed on time: {{step_3.leadsRouted}}\nCRM Health Score: {{step_3.healthScore}}/100\nDeals flagged at risk: {{step_3.atRiskCount}} (combined value ${{step_3.atRiskValue}})\nEstimated leakage prevented today: ${{step_3.leakagePrevented}}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "step_5",
+      "type": "ROUTER",
+      "displayName": "5. AI Response Status Check",
+      "parent": "step_4",
+      "relationship": "after",
+      "branches": [
+        {
+          "index": 0,
+          "name": "Success (200)",
+          "conditions": [
+            [
+              "{{step_4.response.status}} NUMBER_IS_EQUAL_TO 200"
+            ]
+          ]
+        },
+        {
+          "index": 1,
+          "name": "Otherwise"
+        }
+      ]
+    },
+    {
+      "name": "step_6",
+      "type": "PIECE",
+      "displayName": "5a. Deliver Brief (AI-written)",
+      "piece": "@activepieces/piece-slack",
+      "action": "send_channel_message",
+      "parent": "step_5",
+      "relationship": "branch_0",
+      "input": {
+        "channel": "#automations",
+        "sendAsBot": true,
+        "text": ":sunrise: *Morning Revenue Brief*\n\n{{step_4.body.choices[0].message.content}}\n\n_Leads routed: {{step_3.leadsRouted}} | CRM Health: {{step_3.healthScore}}/100 | At-risk deals: {{step_3.atRiskCount}} (${{step_3.atRiskValue}}) | Leakage prevented: ${{step_3.leakagePrevented}}_"
+      }
+    },
+    {
+      "name": "step_7",
+      "type": "PIECE",
+      "displayName": "5b. Deliver Brief (deterministic fallback - AI unreachable)",
+      "piece": "@activepieces/piece-slack",
+      "action": "send_channel_message",
+      "parent": "step_5",
+      "relationship": "branch_1_otherwise",
+      "input": {
+        "channel": "#automations",
+        "sendAsBot": true,
+        "text": ":sunrise: *Morning Revenue Brief*\n\n{{step_3.leadsRouted}} lead(s) were routed on time and the CRM sits at a {{step_3.healthScore}}/100 health score. {{step_3.atRiskCount}} deal(s) worth ${{step_3.atRiskValue}} are flagged at risk and need attention before today's deal review. Estimated leakage prevented: *${{step_3.leakagePrevented}}*.\n\n_(AI narrative unavailable -- add a real OpenAI key for a richer summary; the numbers above are from live deterministic tracking.)_"
+      }
+    }
+  ]
+}

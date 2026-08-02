@@ -1,0 +1,687 @@
+{
+  "flowName": "Pipeline Leak Engine - M1 Speed-to-Lead Router",
+  "flowId": "mipoPYmSTPKQUhkVgKOjR",
+  "platform": "Activepieces",
+  "exportedVia": "Activepieces MCP API (ap_flow_structure / ap_read_step_settings) -- this is the real, live automation definition, not a mock",
+  "trigger": {
+    "name": "trigger",
+    "type": "PIECE_TRIGGER",
+    "displayName": "catch_webhook",
+    "piece": "@activepieces/piece-webhook",
+    "triggerName": "catch_webhook",
+    "input": {
+      "authType": "none"
+    },
+    "samplePayload": {
+      "body": {
+        "full_name": "Jordan Lee",
+        "email": "jordan.lee@acme-example.com",
+        "company": "Acme Example Corp",
+        "job_title": "VP of Rev Ops",
+        "need_description": "We need to stop losing pipeline to slow lead routing.",
+        "country": "United States",
+        "employee_count": 1200
+      }
+    }
+  },
+  "steps": [
+    {
+      "name": "step_1",
+      "type": "PIECE",
+      "displayName": "1. Lead Intake (raw)",
+      "piece": "@activepieces/piece-airtable",
+      "action": "airtable_create_record",
+      "parent": "trigger",
+      "relationship": "after",
+      "input": {
+        "base": "appj1K0tdbMbUD0qg",
+        "tableId": "tblje6mOQMqlrwNOY",
+        "fields": {
+          "Full Name": "{{trigger.body.full_name}}",
+          "Email": "{{trigger.body.email}}",
+          "Company": "{{trigger.body.company}}",
+          "Job Title Raw": "{{trigger.body.job_title}}",
+          "Need Description Raw": "{{trigger.body.need_description}}",
+          "Status": "New"
+        }
+      }
+    },
+    {
+      "name": "step_2",
+      "type": "PIECE",
+      "displayName": "2. Enrichment API Call (deterministic, placeholder key)",
+      "piece": "@activepieces/piece-http",
+      "action": "send_request",
+      "parent": "step_1",
+      "relationship": "after",
+      "continueOnFailure": true,
+      "input": {
+        "url": "https://api.placeholder-enrichment-provider.example.com/v1/firmographics",
+        "method": "POST",
+        "authType": "NONE",
+        "body_type": "json",
+        "failureMode": "continue_all",
+        "headers": {
+          "Authorization": "Bearer PLACEHOLDER_ENRICHMENT_API_KEY"
+        },
+        "body": {
+          "email": "{{trigger.body.email}}",
+          "company": "{{trigger.body.company}}"
+        }
+      }
+    },
+    {
+      "name": "step_3",
+      "type": "PIECE",
+      "displayName": "2a. Save Enrichment Result (illustrative mapping - replace with real provider mapping)",
+      "piece": "@activepieces/piece-airtable",
+      "action": "airtable_update_record",
+      "parent": "step_2",
+      "relationship": "on_success_branch",
+      "input": {
+        "base": "appj1K0tdbMbUD0qg",
+        "tableId": "tblje6mOQMqlrwNOY",
+        "recordId": "{{step_1.id}}",
+        "fields": {
+          "Employee Count Band": "51-200",
+          "Industry": "SaaS",
+          "Revenue Band": "$1M-$10M",
+          "Status": "Enriched",
+          "Enrichment Incomplete": false
+        }
+      }
+    },
+    {
+      "name": "step_4",
+      "type": "PIECE",
+      "displayName": "2b. Enrichment Fallback (mark Unknown + Enrichment Incomplete)",
+      "piece": "@activepieces/piece-airtable",
+      "action": "airtable_update_record",
+      "parent": "step_2",
+      "relationship": "on_failure_branch",
+      "input": {
+        "base": "appj1K0tdbMbUD0qg",
+        "tableId": "tblje6mOQMqlrwNOY",
+        "recordId": "{{step_1.id}}",
+        "fields": {
+          "Employee Count Band": "Unknown",
+          "Industry": "Unknown",
+          "Revenue Band": "Unknown",
+          "Status": "Enrichment Incomplete",
+          "Enrichment Incomplete": true
+        }
+      }
+    },
+    {
+      "name": "step_5",
+      "type": "PIECE",
+      "displayName": "3. Refetch Enriched Lead",
+      "piece": "@activepieces/piece-airtable",
+      "action": "airtable_get_record_by_id",
+      "parent": "step_2",
+      "relationship": "after",
+      "input": {
+        "base": "appj1K0tdbMbUD0qg",
+        "tableId": "tblje6mOQMqlrwNOY",
+        "recordId": "{{step_1.id}}"
+      }
+    },
+    {
+      "name": "step_6",
+      "type": "PIECE",
+      "displayName": "4. AI Persona & Intent Normalization (placeholder key)",
+      "piece": "@activepieces/piece-http",
+      "action": "send_request",
+      "parent": "step_5",
+      "relationship": "after",
+      "continueOnFailure": true,
+      "input": {
+        "url": "https://api.openai.com/v1/chat/completions",
+        "method": "POST",
+        "authType": "NONE",
+        "body_type": "json",
+        "failureMode": "continue_all",
+        "headers": {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer PLACEHOLDER_OPENAI_API_KEY"
+        },
+        "body": {
+          "model": "gpt-4o-mini",
+          "temperature": 0.2,
+          "messages": [
+            {
+              "role": "system",
+              "content": "You normalize messy B2B lead form input. Given a raw job title and a raw free-text need description, return strict JSON with two keys: persona_tag (a short clean persona label, e.g. 'RevOps Leader') and intent_summary (one plain-English sentence summarizing what the lead needs). Return ONLY the JSON object, no other text."
+            },
+            {
+              "role": "user",
+              "content": "Job title: {{trigger.body.job_title}}\nNeed description: {{trigger.body.need_description}}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "step_7",
+      "type": "PIECE",
+      "displayName": "4a. Save AI Output (raw - add JSON parsing once real key connected)",
+      "piece": "@activepieces/piece-airtable",
+      "action": "airtable_update_record",
+      "parent": "step_6",
+      "relationship": "on_success_branch",
+      "input": {
+        "base": "appj1K0tdbMbUD0qg",
+        "tableId": "tblje6mOQMqlrwNOY",
+        "recordId": "{{step_1.id}}",
+        "fields": {
+          "Intent Summary": "{{step_6.body.choices[0].message.content}}",
+          "Persona Tag": "AI-normalized (see Intent Summary raw output; add JSON parsing once a real OpenAI key is connected)"
+        }
+      }
+    },
+    {
+      "name": "step_8",
+      "type": "PIECE",
+      "displayName": "4b. AI Fallback (raw passthrough)",
+      "piece": "@activepieces/piece-airtable",
+      "action": "airtable_update_record",
+      "parent": "step_6",
+      "relationship": "on_failure_branch",
+      "input": {
+        "base": "appj1K0tdbMbUD0qg",
+        "tableId": "tblje6mOQMqlrwNOY",
+        "recordId": "{{step_1.id}}",
+        "fields": {
+          "Intent Summary": "{{trigger.body.need_description}}",
+          "Persona Tag": "{{trigger.body.job_title}}"
+        }
+      }
+    },
+    {
+      "name": "step_30",
+      "type": "ROUTER",
+      "displayName": "4c. AI Response Status Check (catches non-2xx responses that continueOnFailure misses)",
+      "parent": "step_7",
+      "relationship": "after",
+      "note": "Activepieces' HTTP success/failure branching only reacts to network-level failures, not HTTP status codes -- a 401 from OpenAI still counts as a 'successful request'. This explicit status check is required for every AI call in this system.",
+      "branches": [
+        {
+          "index": 0,
+          "name": "AI Call Actually Failed (non-200)",
+          "conditions": [
+            [
+              "{{step_6.response.status}} NUMBER_IS_EQUAL_TO 200"
+            ]
+          ]
+        },
+        {
+          "index": 1,
+          "name": "Otherwise"
+        }
+      ]
+    },
+    {
+      "name": "step_31",
+      "type": "PIECE",
+      "displayName": "4d. Correct AI Fallback (real non-200 status, raw passthrough)",
+      "piece": "@activepieces/piece-airtable",
+      "action": "airtable_update_record",
+      "parent": "step_30",
+      "relationship": "branch_1_otherwise",
+      "input": {
+        "base": "appj1K0tdbMbUD0qg",
+        "tableId": "tblje6mOQMqlrwNOY",
+        "recordId": "{{step_1.id}}",
+        "fields": {
+          "Intent Summary": "{{trigger.body.need_description}}",
+          "Persona Tag": "{{trigger.body.job_title}}"
+        }
+      }
+    },
+    {
+      "name": "step_9",
+      "type": "ROUTER",
+      "displayName": "5. Deterministic Territory Assignment",
+      "parent": "step_6",
+      "relationship": "after",
+      "branches": [
+        {
+          "index": 0,
+          "name": "Enterprise (employee_count >= 1000)",
+          "conditions": [
+            [
+              "{{trigger.body.employee_count}} NUMBER_IS_GREATER_THAN 999"
+            ]
+          ]
+        },
+        {
+          "index": 1,
+          "name": "India",
+          "conditions": [
+            [
+              "{{trigger.body.country}} TEXT_EXACTLY_MATCHES 'India'"
+            ]
+          ]
+        },
+        {
+          "index": 2,
+          "name": "United States",
+          "conditions": [
+            [
+              "{{trigger.body.country}} TEXT_EXACTLY_MATCHES 'United States'"
+            ]
+          ]
+        },
+        {
+          "index": 3,
+          "name": "Otherwise"
+        }
+      ]
+    },
+    {
+      "name": "step_10",
+      "type": "PIECE",
+      "displayName": "5a. Set Territory = enterprise",
+      "piece": "@activepieces/piece-airtable",
+      "action": "airtable_update_record",
+      "parent": "step_9",
+      "relationship": "branch_0",
+      "input": {
+        "base": "appj1K0tdbMbUD0qg",
+        "tableId": "tblje6mOQMqlrwNOY",
+        "recordId": "{{step_1.id}}",
+        "fields": {
+          "Territory": "enterprise"
+        }
+      }
+    },
+    {
+      "name": "step_11",
+      "type": "PIECE",
+      "displayName": "5b. Set Territory = india",
+      "piece": "@activepieces/piece-airtable",
+      "action": "airtable_update_record",
+      "parent": "step_9",
+      "relationship": "branch_1",
+      "input": {
+        "base": "appj1K0tdbMbUD0qg",
+        "tableId": "tblje6mOQMqlrwNOY",
+        "recordId": "{{step_1.id}}",
+        "fields": {
+          "Territory": "india"
+        }
+      }
+    },
+    {
+      "name": "step_12",
+      "type": "PIECE",
+      "displayName": "5c. Set Territory = us",
+      "piece": "@activepieces/piece-airtable",
+      "action": "airtable_update_record",
+      "parent": "step_9",
+      "relationship": "branch_2",
+      "input": {
+        "base": "appj1K0tdbMbUD0qg",
+        "tableId": "tblje6mOQMqlrwNOY",
+        "recordId": "{{step_1.id}}",
+        "fields": {
+          "Territory": "us"
+        }
+      }
+    },
+    {
+      "name": "step_13",
+      "type": "PIECE",
+      "displayName": "5d. Set Territory = unassigned (default)",
+      "piece": "@activepieces/piece-airtable",
+      "action": "airtable_update_record",
+      "parent": "step_9",
+      "relationship": "branch_3_otherwise",
+      "input": {
+        "base": "appj1K0tdbMbUD0qg",
+        "tableId": "tblje6mOQMqlrwNOY",
+        "recordId": "{{step_1.id}}",
+        "fields": {
+          "Territory": "unassigned"
+        }
+      }
+    },
+    {
+      "name": "step_14",
+      "type": "PIECE",
+      "displayName": "6. Refetch Scored Lead Inputs",
+      "piece": "@activepieces/piece-airtable",
+      "action": "airtable_get_record_by_id",
+      "parent": "step_9",
+      "relationship": "after",
+      "input": {
+        "base": "appj1K0tdbMbUD0qg",
+        "tableId": "tblje6mOQMqlrwNOY",
+        "recordId": "{{step_1.id}}"
+      }
+    },
+    {
+      "name": "step_15",
+      "type": "PIECE",
+      "displayName": "7. Deterministic ICP Scoring Lookup",
+      "piece": "@activepieces/piece-airtable",
+      "action": "airtable_find_record",
+      "parent": "step_14",
+      "relationship": "after",
+      "input": {
+        "base": "appj1K0tdbMbUD0qg",
+        "tableId": "tblbpXy7YF2tv6OQA",
+        "searchField": "Rule Name",
+        "searchValue": "{{step_14.fields.Industry}} / {{step_14.fields.'Employee Count Band'}} / {{step_14.fields.Territory}}"
+      }
+    },
+    {
+      "name": "step_16",
+      "type": "ROUTER",
+      "displayName": "8. Apply ICP Score (rule matched vs fallback)",
+      "parent": "step_15",
+      "relationship": "after",
+      "branches": [
+        {
+          "index": 0,
+          "name": "Rule Matched",
+          "conditions": [
+            [
+              "{{step_15}} LIST_IS_NOT_EMPTY"
+            ]
+          ]
+        },
+        {
+          "index": 1,
+          "name": "Otherwise"
+        }
+      ]
+    },
+    {
+      "name": "step_17",
+      "type": "ROUTER",
+      "displayName": "8a. Map Matched Rule -> Lead Tier/Priority",
+      "parent": "step_16",
+      "relationship": "branch_0",
+      "branches": [
+        {
+          "index": 0,
+          "name": "Tier 1",
+          "conditions": [
+            [
+              "{{step_15[0].fields.'ICP Tier'}} TEXT_EXACTLY_MATCHES 'Tier 1 - Ideal Fit'"
+            ]
+          ]
+        },
+        {
+          "index": 1,
+          "name": "Tier 2",
+          "conditions": [
+            [
+              "{{step_15[0].fields.'ICP Tier'}} TEXT_EXACTLY_MATCHES 'Tier 2 - Good Fit'"
+            ]
+          ]
+        },
+        {
+          "index": 2,
+          "name": "Otherwise"
+        }
+      ]
+    },
+    {
+      "name": "step_18",
+      "type": "PIECE",
+      "displayName": "Apply Tier 1 / High",
+      "piece": "@activepieces/piece-airtable",
+      "action": "airtable_update_record",
+      "parent": "step_17",
+      "relationship": "branch_0",
+      "input": {
+        "base": "appj1K0tdbMbUD0qg",
+        "tableId": "tblje6mOQMqlrwNOY",
+        "recordId": "{{step_1.id}}",
+        "fields": {
+          "ICP Tier": "Tier 1 - Ideal Fit",
+          "Priority": "High",
+          "Status": "Scored"
+        }
+      }
+    },
+    {
+      "name": "step_19",
+      "type": "PIECE",
+      "displayName": "Apply Tier 2 / Medium",
+      "piece": "@activepieces/piece-airtable",
+      "action": "airtable_update_record",
+      "parent": "step_17",
+      "relationship": "branch_1",
+      "input": {
+        "base": "appj1K0tdbMbUD0qg",
+        "tableId": "tblje6mOQMqlrwNOY",
+        "recordId": "{{step_1.id}}",
+        "fields": {
+          "ICP Tier": "Tier 2 - Good Fit",
+          "Priority": "Medium",
+          "Status": "Scored"
+        }
+      }
+    },
+    {
+      "name": "step_20",
+      "type": "PIECE",
+      "displayName": "Apply Tier 3 / Low (default)",
+      "piece": "@activepieces/piece-airtable",
+      "action": "airtable_update_record",
+      "parent": "step_17",
+      "relationship": "branch_2_otherwise",
+      "input": {
+        "base": "appj1K0tdbMbUD0qg",
+        "tableId": "tblje6mOQMqlrwNOY",
+        "recordId": "{{step_1.id}}",
+        "fields": {
+          "ICP Tier": "Tier 3 - Poor Fit",
+          "Priority": "Low",
+          "Status": "Scored"
+        }
+      }
+    },
+    {
+      "name": "step_21",
+      "type": "PIECE",
+      "displayName": "8b. No Rule Matched -> Apply Fallback Score (Tier 3 / Low)",
+      "piece": "@activepieces/piece-airtable",
+      "action": "airtable_update_record",
+      "parent": "step_16",
+      "relationship": "branch_1_otherwise",
+      "input": {
+        "base": "appj1K0tdbMbUD0qg",
+        "tableId": "tblje6mOQMqlrwNOY",
+        "recordId": "{{step_1.id}}",
+        "fields": {
+          "ICP Tier": "Tier 3 - Poor Fit",
+          "Priority": "Low",
+          "Status": "Scored"
+        }
+      }
+    },
+    {
+      "name": "step_22",
+      "type": "PIECE",
+      "displayName": "9. Deterministic Rep Lookup (by Territory)",
+      "piece": "@activepieces/piece-airtable",
+      "action": "airtable_find_record",
+      "parent": "step_16",
+      "relationship": "after",
+      "input": {
+        "base": "appj1K0tdbMbUD0qg",
+        "tableId": "tbloaM12c3UpHvWNN",
+        "searchField": "Territory",
+        "searchValue": "{{step_14.fields.Territory}}"
+      }
+    },
+    {
+      "name": "step_23",
+      "type": "ROUTER",
+      "displayName": "10. Assign Owner (rep found vs fallback queue)",
+      "parent": "step_22",
+      "relationship": "after",
+      "branches": [
+        {
+          "index": 0,
+          "name": "Rep Found",
+          "conditions": [
+            [
+              "{{step_22}} LIST_IS_NOT_EMPTY"
+            ]
+          ]
+        },
+        {
+          "index": 1,
+          "name": "Otherwise"
+        }
+      ]
+    },
+    {
+      "name": "step_24",
+      "type": "PIECE",
+      "displayName": "10a. Assign Found Rep",
+      "piece": "@activepieces/piece-airtable",
+      "action": "airtable_update_record",
+      "parent": "step_23",
+      "relationship": "branch_0",
+      "input": {
+        "base": "appj1K0tdbMbUD0qg",
+        "tableId": "tblje6mOQMqlrwNOY",
+        "recordId": "{{step_1.id}}",
+        "fields": {
+          "Assigned Owner Name": "{{step_22[0].fields.Name}}",
+          "Assigned Owner Email": "{{step_22[0].fields.Email}}",
+          "Status": "Routed"
+        }
+      }
+    },
+    {
+      "name": "step_25",
+      "type": "PIECE",
+      "displayName": "10b-i. Fallback Rep Lookup (unassigned queue)",
+      "piece": "@activepieces/piece-airtable",
+      "action": "airtable_find_record",
+      "parent": "step_23",
+      "relationship": "branch_1_otherwise",
+      "input": {
+        "base": "appj1K0tdbMbUD0qg",
+        "tableId": "tbloaM12c3UpHvWNN",
+        "searchField": "Territory",
+        "searchValue": "unassigned"
+      }
+    },
+    {
+      "name": "step_26",
+      "type": "PIECE",
+      "displayName": "10b-ii. Assign Fallback Queue Owner",
+      "piece": "@activepieces/piece-airtable",
+      "action": "airtable_update_record",
+      "parent": "step_25",
+      "relationship": "after",
+      "input": {
+        "base": "appj1K0tdbMbUD0qg",
+        "tableId": "tblje6mOQMqlrwNOY",
+        "recordId": "{{step_1.id}}",
+        "fields": {
+          "Assigned Owner Name": "{{step_25[0].fields.Name}}",
+          "Assigned Owner Email": "{{step_25[0].fields.Email}}",
+          "Status": "Routed"
+        }
+      }
+    },
+    {
+      "name": "step_27",
+      "type": "PIECE",
+      "displayName": "11. Refetch Routed Lead",
+      "piece": "@activepieces/piece-airtable",
+      "action": "airtable_get_record_by_id",
+      "parent": "step_23",
+      "relationship": "after",
+      "input": {
+        "base": "appj1K0tdbMbUD0qg",
+        "tableId": "tblje6mOQMqlrwNOY",
+        "recordId": "{{step_1.id}}"
+      }
+    },
+    {
+      "name": "step_28",
+      "type": "PIECE",
+      "displayName": "12. Notify Rep in Slack (#leads)",
+      "piece": "@activepieces/piece-slack",
+      "action": "send_channel_message",
+      "parent": "step_27",
+      "relationship": "after",
+      "input": {
+        "channel": "#leads",
+        "sendAsBot": true,
+        "text": ":rotating_light: *New lead routed* \u2014 {{step_27.fields.'Full Name'}} ({{step_27.fields.Company}})\n*Persona:* {{step_27.fields.'Persona Tag'}}\n*Intent:* {{step_27.fields.'Intent Summary'}}\n*Territory:* {{step_27.fields.Territory}}  |  *ICP Tier:* {{step_27.fields.'ICP Tier'}}  |  *Priority:* {{step_27.fields.Priority}}\n*Assigned to:* {{step_27.fields.'Assigned Owner Name'}} ({{step_27.fields.'Assigned Owner Email'}})\n*Enrichment:* {{step_27.fields.'Enrichment Incomplete'}}"
+      }
+    },
+    {
+      "name": "step_29",
+      "type": "PIECE",
+      "displayName": "13. Mark Notified",
+      "piece": "@activepieces/piece-airtable",
+      "action": "airtable_update_record",
+      "parent": "step_28",
+      "relationship": "after",
+      "input": {
+        "base": "appj1K0tdbMbUD0qg",
+        "tableId": "tblje6mOQMqlrwNOY",
+        "recordId": "{{step_1.id}}",
+        "fields": {
+          "Status": "Notified",
+          "Notified At": "{{now}}"
+        }
+      }
+    },
+    {
+      "name": "step_32",
+      "type": "PIECE",
+      "displayName": "14. Fetch Daily Brief Tracker (for Leads Routed increment)",
+      "piece": "@activepieces/piece-airtable",
+      "action": "airtable_get_record_by_id",
+      "parent": "step_29",
+      "relationship": "after",
+      "input": {
+        "base": "apprhpyaCN6Dvz7hw",
+        "tableId": "tblYHgidxYRUJ9Yb5",
+        "recordId": "recWrxHffhyEWWWsP"
+      }
+    },
+    {
+      "name": "step_33",
+      "type": "CODE",
+      "displayName": "15. Compute Incremented Leads Routed Count",
+      "parent": "step_32",
+      "relationship": "after",
+      "sourceCode": "export const code = async (inputs) => {\n  const current = Number(inputs.current) || 0;\n  return current + 1;\n};",
+      "input": {
+        "current": "{{step_32.fields.'Leads Routed Count'}}"
+      }
+    },
+    {
+      "name": "step_34",
+      "type": "PIECE",
+      "displayName": "16. Increment Leads Routed Count",
+      "piece": "@activepieces/piece-airtable",
+      "action": "airtable_update_record",
+      "parent": "step_33",
+      "relationship": "after",
+      "input": {
+        "base": "apprhpyaCN6Dvz7hw",
+        "tableId": "tblYHgidxYRUJ9Yb5",
+        "recordId": "recWrxHffhyEWWWsP",
+        "fields": {
+          "Leads Routed Count": "{{step_33}}",
+          "Last Updated": "{{now}}"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,406 @@
+{
+  "flowName": "Pipeline Leak Engine - M2 CRM Self-Healing Engine",
+  "flowId": "Fmsvvg5EkLQ3VFQ7kc45K",
+  "platform": "Activepieces",
+  "exportedVia": "Activepieces MCP API (ap_flow_structure / ap_read_step_settings) -- this is the real, live automation definition, not a mock",
+  "trigger": {
+    "name": "trigger",
+    "type": "PIECE_TRIGGER",
+    "displayName": "catch_webhook",
+    "piece": "@activepieces/piece-webhook",
+    "triggerName": "catch_webhook",
+    "input": {
+      "authType": "none"
+    },
+    "samplePayload": {
+      "body": {
+        "record_id": "recXXXXXXXXXXXXXX",
+        "email": "someone@company.com",
+        "company": "Company Name"
+      }
+    }
+  },
+  "steps": [
+    {
+      "name": "step_1",
+      "type": "ROUTER",
+      "displayName": "1. Deterministic Email Format Check",
+      "parent": "trigger",
+      "relationship": "after",
+      "branches": [
+        {
+          "index": 0,
+          "name": "Valid Format",
+          "conditions": [
+            [
+              "{{trigger.body.email}} TEXT_CONTAINS '@'",
+              "{{trigger.body.email}} TEXT_CONTAINS '.'"
+            ]
+          ]
+        },
+        {
+          "index": 1,
+          "name": "Otherwise"
+        }
+      ]
+    },
+    {
+      "name": "step_2",
+      "type": "PIECE",
+      "displayName": "1a. Log Invalid Email Format Issue",
+      "piece": "@activepieces/piece-airtable",
+      "action": "airtable_create_record",
+      "parent": "step_1",
+      "relationship": "branch_1_otherwise",
+      "input": {
+        "base": "appEMu33dTfSQoThw",
+        "tableId": "tblYa61a9178gHtHQ",
+        "fields": {
+          "Lead Record Id": "{{trigger.body.record_id}}",
+          "Issue Type": "Invalid Email Format",
+          "Company": "{{trigger.body.company}}",
+          "Status": "Open",
+          "Detected At": "{{now}}",
+          "Details": "Email '{{trigger.body.email}}' failed deterministic format check (missing @ or .)"
+        }
+      }
+    },
+    {
+      "name": "step_11",
+      "type": "PIECE",
+      "displayName": "1b. Fetch Health Tracker (for Invalid increment)",
+      "piece": "@activepieces/piece-airtable",
+      "action": "airtable_get_record_by_id",
+      "parent": "step_2",
+      "relationship": "after",
+      "input": {
+        "base": "appEMu33dTfSQoThw",
+        "tableId": "tblrZKpPfzh3rfTzz",
+        "recordId": "rec98DhC1bwxrEzZq"
+      }
+    },
+    {
+      "name": "step_13",
+      "type": "CODE",
+      "displayName": "1b-ii. Compute Incremented Invalid Count",
+      "parent": "step_11",
+      "relationship": "after",
+      "sourceCode": "export const code = async (inputs) => {\n  const current = Number(inputs.current) || 0;\n  return current + 1;\n};",
+      "input": {
+        "current": "{{step_11.fields.'Invalid Email Count'}}"
+      }
+    },
+    {
+      "name": "step_12",
+      "type": "PIECE",
+      "displayName": "1c. Increment Invalid Email Count",
+      "piece": "@activepieces/piece-airtable",
+      "action": "airtable_update_record",
+      "parent": "step_13",
+      "relationship": "after",
+      "input": {
+        "base": "appEMu33dTfSQoThw",
+        "tableId": "tblrZKpPfzh3rfTzz",
+        "recordId": "rec98DhC1bwxrEzZq",
+        "fields": {
+          "Invalid Email Count": "{{step_13}}"
+        }
+      }
+    },
+    {
+      "name": "step_3",
+      "type": "PIECE",
+      "displayName": "2. Deterministic Exact-Match Dedup (by Email)",
+      "piece": "@activepieces/piece-airtable",
+      "action": "airtable_find_record",
+      "parent": "step_1",
+      "relationship": "after",
+      "input": {
+        "base": "appj1K0tdbMbUD0qg",
+        "tableId": "tblje6mOQMqlrwNOY",
+        "searchField": "Email",
+        "searchValue": "{{trigger.body.email}}"
+      }
+    },
+    {
+      "name": "step_4",
+      "type": "ROUTER",
+      "displayName": "3. Duplicate Check (more than one match on Email)",
+      "parent": "step_3",
+      "relationship": "after",
+      "branches": [
+        {
+          "index": 0,
+          "name": "Duplicate Found",
+          "conditions": [
+            [
+              "{{step_3[1].id}} EXISTS"
+            ]
+          ]
+        },
+        {
+          "index": 1,
+          "name": "Otherwise"
+        }
+      ]
+    },
+    {
+      "name": "step_5",
+      "type": "PIECE",
+      "displayName": "3a. Auto-Merge: Delete Redundant Duplicate Record",
+      "piece": "@activepieces/piece-airtable",
+      "action": "airtable_delete_record",
+      "parent": "step_4",
+      "relationship": "branch_0",
+      "input": {
+        "base": "appj1K0tdbMbUD0qg",
+        "tableId": "tblje6mOQMqlrwNOY",
+        "recordId": "{{trigger.body.record_id}}"
+      }
+    },
+    {
+      "name": "step_6",
+      "type": "PIECE",
+      "displayName": "3b. Log Auto-Merged Duplicate",
+      "piece": "@activepieces/piece-airtable",
+      "action": "airtable_create_record",
+      "parent": "step_5",
+      "relationship": "after",
+      "input": {
+        "base": "appEMu33dTfSQoThw",
+        "tableId": "tblYa61a9178gHtHQ",
+        "fields": {
+          "Lead Record Id": "{{trigger.body.record_id}}",
+          "Issue Type": "Exact Duplicate - Auto-Merged",
+          "Company": "{{trigger.body.company}}",
+          "Status": "Resolved",
+          "Detected At": "{{now}}",
+          "Details": "Duplicate record {{trigger.body.record_id}} (email {{trigger.body.email}}) auto-merged and deleted -- an existing Leads record with the same email was kept."
+        }
+      }
+    },
+    {
+      "name": "step_14",
+      "type": "PIECE",
+      "displayName": "3c. Fetch Health Tracker (for Auto-Merged increment)",
+      "piece": "@activepieces/piece-airtable",
+      "action": "airtable_get_record_by_id",
+      "parent": "step_6",
+      "relationship": "after",
+      "input": {
+        "base": "appEMu33dTfSQoThw",
+        "tableId": "tblrZKpPfzh3rfTzz",
+        "recordId": "rec98DhC1bwxrEzZq"
+      }
+    },
+    {
+      "name": "step_15",
+      "type": "CODE",
+      "displayName": "3d. Compute Incremented Auto-Merged Count",
+      "parent": "step_14",
+      "relationship": "after",
+      "sourceCode": "export const code = async (inputs) => {\n  const current = Number(inputs.current) || 0;\n  return current + 1;\n};",
+      "input": {
+        "current": "{{step_14.fields.'Auto-Merged Duplicate Count'}}"
+      }
+    },
+    {
+      "name": "step_16",
+      "type": "PIECE",
+      "displayName": "3e. Increment Auto-Merged Duplicate Count",
+      "piece": "@activepieces/piece-airtable",
+      "action": "airtable_update_record",
+      "parent": "step_15",
+      "relationship": "after",
+      "input": {
+        "base": "appEMu33dTfSQoThw",
+        "tableId": "tblrZKpPfzh3rfTzz",
+        "recordId": "rec98DhC1bwxrEzZq",
+        "fields": {
+          "Auto-Merged Duplicate Count": "{{step_15}}"
+        }
+      }
+    },
+    {
+      "name": "step_7",
+      "type": "PIECE",
+      "displayName": "4. Fuzzy Candidate Search (by Company substring)",
+      "piece": "@activepieces/piece-airtable",
+      "action": "airtable_find_record",
+      "parent": "step_4",
+      "relationship": "branch_1_otherwise",
+      "input": {
+        "base": "appj1K0tdbMbUD0qg",
+        "tableId": "tblje6mOQMqlrwNOY",
+        "searchField": "Company",
+        "searchValue": "{{trigger.body.company}}"
+      }
+    },
+    {
+      "name": "step_8",
+      "type": "ROUTER",
+      "displayName": "5. Fuzzy Candidate Check (different company record found)",
+      "parent": "step_7",
+      "relationship": "after",
+      "branches": [
+        {
+          "index": 0,
+          "name": "Candidate Found (different record)",
+          "conditions": [
+            [
+              "{{step_7[0].id}} EXISTS",
+              "{{step_7[0].id}} TEXT_DOES_NOT_EXACTLY_MATCH {{trigger.body.record_id}}"
+            ]
+          ]
+        },
+        {
+          "index": 1,
+          "name": "Otherwise"
+        }
+      ]
+    },
+    {
+      "name": "step_9",
+      "type": "PIECE",
+      "displayName": "5a. AI Fuzzy Entity Resolution Judgment (placeholder key)",
+      "piece": "@activepieces/piece-http",
+      "action": "send_request",
+      "parent": "step_8",
+      "relationship": "branch_0",
+      "continueOnFailure": true,
+      "input": {
+        "url": "https://api.openai.com/v1/chat/completions",
+        "method": "POST",
+        "authType": "NONE",
+        "body_type": "json",
+        "failureMode": "continue_all",
+        "headers": {
+          "Authorization": "Bearer PLACEHOLDER_OPENAI_API_KEY",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "model": "gpt-4o-mini",
+          "temperature": 0,
+          "messages": [
+            {
+              "role": "system",
+              "content": "You judge whether two B2B company names likely refer to the same real-world account (e.g. 'Acme Corp' and 'Acme Corporation Inc.'). Respond with strict JSON: {\"likely_same\": true|false, \"reasoning\": \"one sentence\"}. Never auto-merge; a human will review your judgment."
+            },
+            {
+              "role": "user",
+              "content": "Company A: {{trigger.body.company}}\nCompany B: {{step_7[0].fields.Company}}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "step_10",
+      "type": "PIECE",
+      "displayName": "5b. Flag for Human Review (never auto-merge)",
+      "piece": "@activepieces/piece-airtable",
+      "action": "airtable_create_record",
+      "parent": "step_9",
+      "relationship": "after",
+      "input": {
+        "base": "appEMu33dTfSQoThw",
+        "tableId": "tblYa61a9178gHtHQ",
+        "fields": {
+          "Lead Record Id": "{{trigger.body.record_id}}",
+          "Issue Type": "Possible Duplicate Account",
+          "Company": "{{trigger.body.company}}",
+          "Status": "Open",
+          "Detected At": "{{now}}",
+          "Details": "Possible match with existing record {{step_7[0].id}} (\"{{step_7[0].fields.Company}}\"). AI judgment (if reachable): {{step_9.body.choices[0].message.content}}. Flagged for human review -- not auto-merged."
+        }
+      }
+    },
+    {
+      "name": "step_17",
+      "type": "PIECE",
+      "displayName": "5c. Fetch Health Tracker (for Flagged increment)",
+      "piece": "@activepieces/piece-airtable",
+      "action": "airtable_get_record_by_id",
+      "parent": "step_10",
+      "relationship": "after",
+      "input": {
+        "base": "appEMu33dTfSQoThw",
+        "tableId": "tblrZKpPfzh3rfTzz",
+        "recordId": "rec98DhC1bwxrEzZq"
+      }
+    },
+    {
+      "name": "step_18",
+      "type": "CODE",
+      "displayName": "5d. Compute Incremented Flagged Count",
+      "parent": "step_17",
+      "relationship": "after",
+      "sourceCode": "export const code = async (inputs) => {\n  const current = Number(inputs.current) || 0;\n  return current + 1;\n};",
+      "input": {
+        "current": "{{step_17.fields.'Flagged For Review Count'}}"
+      }
+    },
+    {
+      "name": "step_19",
+      "type": "PIECE",
+      "displayName": "5e. Increment Flagged For Review Count",
+      "piece": "@activepieces/piece-airtable",
+      "action": "airtable_update_record",
+      "parent": "step_18",
+      "relationship": "after",
+      "input": {
+        "base": "appEMu33dTfSQoThw",
+        "tableId": "tblrZKpPfzh3rfTzz",
+        "recordId": "rec98DhC1bwxrEzZq",
+        "fields": {
+          "Flagged For Review Count": "{{step_18}}"
+        }
+      }
+    },
+    {
+      "name": "step_20",
+      "type": "PIECE",
+      "displayName": "6. Fetch Health Tracker (final - for Total + Score)",
+      "piece": "@activepieces/piece-airtable",
+      "action": "airtable_get_record_by_id",
+      "parent": "step_4",
+      "relationship": "after",
+      "input": {
+        "base": "appEMu33dTfSQoThw",
+        "tableId": "tblrZKpPfzh3rfTzz",
+        "recordId": "rec98DhC1bwxrEzZq"
+      }
+    },
+    {
+      "name": "step_21",
+      "type": "CODE",
+      "displayName": "7. Compute New Total + Recomputed Health Score",
+      "parent": "step_20",
+      "relationship": "after",
+      "sourceCode": "export const code = async (inputs) => {\n  const total = (Number(inputs.total) || 0) + 1;\n  const invalid = Number(inputs.invalid) || 0;\n  const valid = Math.max(total - invalid, 0);\n  const score = Math.round((valid / total) * 1000) / 10;\n  return { total, score };\n};",
+      "input": {
+        "total": "{{step_20.fields.'Total Records Checked'}}",
+        "invalid": "{{step_20.fields.'Invalid Email Count'}}"
+      }
+    },
+    {
+      "name": "step_22",
+      "type": "PIECE",
+      "displayName": "8. Update Total Records Checked + Health Score",
+      "piece": "@activepieces/piece-airtable",
+      "action": "airtable_update_record",
+      "parent": "step_21",
+      "relationship": "after",
+      "input": {
+        "base": "appEMu33dTfSQoThw",
+        "tableId": "tblrZKpPfzh3rfTzz",
+        "recordId": "rec98DhC1bwxrEzZq",
+        "fields": {
+          "Total Records Checked": "{{step_21.total}}",
+          "Health Score": "{{step_21.score}}",
+          "Last Updated": "{{now}}"
+        }
+      }
+    }
+  ]
+}
