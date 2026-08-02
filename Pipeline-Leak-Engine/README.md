@@ -60,7 +60,7 @@ No OpenAI or third-party enrichment key is wired into these flows — each AI-de
 
 ## Modules
 
-See `ARCHITECTURE.md` for the full flow-by-flow breakdown, `SAMPLE_CLIENT_SCENARIO.md` for a synthetic-data walkthrough, `ROI_ONE_PAGER.md` for the leakage-prevented methodology, and `PRICING.md` for how each module is priced standalone vs. bundled.
+See `workflows/` for the actual exported flow definitions (trigger, every step, every branch condition, every piece of code) for all four modules — this is the real automation, not a description of one. `ARCHITECTURE.md` has the full flow-by-flow breakdown, `SAMPLE_CLIENT_SCENARIO.md` a synthetic-data walkthrough, `ROI_ONE_PAGER.md` the leakage-prevented methodology, and `PRICING.md` how each module is priced standalone vs. bundled.
 
 ## What would break at 10x volume
 

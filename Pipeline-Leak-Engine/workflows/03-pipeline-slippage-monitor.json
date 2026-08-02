@@ -1,0 +1,365 @@
+{
+  "flowName": "Pipeline Leak Engine - M3 Pipeline Slippage Monitor",
+  "flowId": "8KYjkvSX8sCj0xlvIT8QU",
+  "platform": "Activepieces",
+  "exportedVia": "Activepieces MCP API (ap_flow_structure / ap_read_step_settings) -- this is the real, live automation definition, not a mock",
+  "trigger": {
+    "name": "trigger",
+    "type": "PIECE_TRIGGER",
+    "displayName": "catch_webhook",
+    "piece": "@activepieces/piece-webhook",
+    "triggerName": "catch_webhook",
+    "input": {
+      "authType": "none"
+    },
+    "samplePayload": {
+      "body": {
+        "deal_id": "recXXXXXXXXXXXXXX",
+        "requested_stage": "Proposal Sent (optional)"
+      }
+    }
+  },
+  "steps": [
+    {
+      "name": "step_1",
+      "type": "PIECE",
+      "displayName": "1. Fetch Deal Record",
+      "piece": "@activepieces/piece-airtable",
+      "action": "airtable_get_record_by_id",
+      "parent": "trigger",
+      "relationship": "after",
+      "input": {
+        "base": "appN8qNQB9nhbkYJI",
+        "tableId": "tblmIREoNlmfY8fHy",
+        "recordId": "{{trigger.body.deal_id}}"
+      }
+    },
+    {
+      "name": "step_2",
+      "type": "ROUTER",
+      "displayName": "2. Deterministic Stage-Entry Gate Check",
+      "parent": "step_1",
+      "relationship": "after",
+      "branches": [
+        {
+          "index": 0,
+          "name": "Proposal Gate Failed",
+          "conditions": [
+            [
+              "{{trigger.body.requested_stage}} TEXT_EXACTLY_MATCHES 'Proposal Sent'",
+              "{{step_1.fields.'Proposal Document Link'}} DOES_NOT_EXIST"
+            ]
+          ]
+        },
+        {
+          "index": 1,
+          "name": "Closed Won Gate Failed",
+          "conditions": [
+            [
+              "{{trigger.body.requested_stage}} TEXT_EXACTLY_MATCHES 'Closed Won'",
+              "{{step_1.fields.'Close Date'}} DOES_NOT_EXIST"
+            ]
+          ]
+        },
+        {
+          "index": 2,
+          "name": "Otherwise"
+        }
+      ]
+    },
+    {
+      "name": "step_3",
+      "type": "PIECE",
+      "displayName": "2a. Block: Proposal Gate Failed",
+      "piece": "@activepieces/piece-airtable",
+      "action": "airtable_update_record",
+      "parent": "step_2",
+      "relationship": "branch_0",
+      "input": {
+        "base": "appN8qNQB9nhbkYJI",
+        "tableId": "tblmIREoNlmfY8fHy",
+        "recordId": "{{trigger.body.deal_id}}",
+        "fields": {
+          "Gate Blocked Reason": "Blocked: cannot move to Proposal Sent -- Proposal Document Link is required"
+        }
+      }
+    },
+    {
+      "name": "step_4",
+      "type": "PIECE",
+      "displayName": "2b. Block: Closed Won Gate Failed",
+      "piece": "@activepieces/piece-airtable",
+      "action": "airtable_update_record",
+      "parent": "step_2",
+      "relationship": "branch_1",
+      "input": {
+        "base": "appN8qNQB9nhbkYJI",
+        "tableId": "tblmIREoNlmfY8fHy",
+        "recordId": "{{trigger.body.deal_id}}",
+        "fields": {
+          "Gate Blocked Reason": "Blocked: cannot move to Closed Won -- Close Date is required"
+        }
+      }
+    },
+    {
+      "name": "step_5",
+      "type": "ROUTER",
+      "displayName": "2c. Stage Change Requested?",
+      "parent": "step_2",
+      "relationship": "branch_2_otherwise",
+      "branches": [
+        {
+          "index": 0,
+          "name": "Yes - Apply Stage Change",
+          "conditions": [
+            [
+              "{{trigger.body.requested_stage}} EXISTS"
+            ]
+          ]
+        },
+        {
+          "index": 1,
+          "name": "Otherwise"
+        }
+      ]
+    },
+    {
+      "name": "step_6",
+      "type": "PIECE",
+      "displayName": "2d. Apply Requested Stage Change",
+      "piece": "@activepieces/piece-airtable",
+      "action": "airtable_update_record",
+      "parent": "step_5",
+      "relationship": "branch_0",
+      "input": {
+        "base": "appN8qNQB9nhbkYJI",
+        "tableId": "tblmIREoNlmfY8fHy",
+        "recordId": "{{trigger.body.deal_id}}",
+        "fields": {
+          "Stage": "{{trigger.body.requested_stage}}",
+          "Gate Blocked Reason": ""
+        }
+      }
+    },
+    {
+      "name": "step_7",
+      "type": "CODE",
+      "displayName": "3. Deterministic Tripwire Calculation",
+      "parent": "step_2",
+      "relationship": "after",
+      "sourceCode": "export const code = async (inputs) => {\n  const now = Date.now();\n  const stageEntered = inputs.stageEnteredAt ? new Date(inputs.stageEnteredAt).getTime() : now;\n  const lastActivity = inputs.lastActivityAt ? new Date(inputs.lastActivityAt).getTime() : now;\n  const daysInStage = Math.round((now - stageEntered) / 86400000);\n  const daysSinceActivity = Math.round((now - lastActivity) / 86400000);\n  const pushedCount = Number(inputs.closeDatePushedCount) || 0;\n\n  const reasons = [];\n  if (daysInStage > 10) reasons.push(`${daysInStage} days in current stage (threshold: 10)`);\n  if (daysSinceActivity > 7) reasons.push(`${daysSinceActivity} days since last activity (threshold: 7)`);\n  if (pushedCount >= 2) reasons.push(`close date pushed ${pushedCount} times (threshold: 2)`);\n\n  return {\n    daysInStage,\n    daysSinceActivity,\n    pushedCount,\n    tripwireTriggered: reasons.length > 0,\n    reasonsText: reasons.join('; ')\n  };\n};",
+      "input": {
+        "stageEnteredAt": "{{step_1.fields.'Stage Entered At'}}",
+        "lastActivityAt": "{{step_1.fields.'Last Activity At'}}",
+        "closeDatePushedCount": "{{step_1.fields.'Close Date Pushed Count'}}"
+      }
+    },
+    {
+      "name": "step_8",
+      "type": "ROUTER",
+      "displayName": "4. Tripwire Triggered?",
+      "parent": "step_7",
+      "relationship": "after",
+      "branches": [
+        {
+          "index": 0,
+          "name": "Triggered",
+          "conditions": [
+            [
+              "{{step_7.tripwireTriggered}} BOOLEAN_IS_TRUE"
+            ]
+          ]
+        },
+        {
+          "index": 1,
+          "name": "Otherwise"
+        }
+      ]
+    },
+    {
+      "name": "step_9",
+      "type": "PIECE",
+      "displayName": "4b. No Tripwire - Mark Healthy",
+      "piece": "@activepieces/piece-airtable",
+      "action": "airtable_update_record",
+      "parent": "step_8",
+      "relationship": "branch_1_otherwise",
+      "input": {
+        "base": "appN8qNQB9nhbkYJI",
+        "tableId": "tblmIREoNlmfY8fHy",
+        "recordId": "{{trigger.body.deal_id}}",
+        "fields": {
+          "Risk Narrative": "No risk signals detected.",
+          "At Risk": false
+        }
+      }
+    },
+    {
+      "name": "step_10",
+      "type": "PIECE",
+      "displayName": "4a. AI Risk Narrative (placeholder key)",
+      "piece": "@activepieces/piece-http",
+      "action": "send_request",
+      "parent": "step_8",
+      "relationship": "branch_0",
+      "continueOnFailure": true,
+      "input": {
+        "url": "https://api.openai.com/v1/chat/completions",
+        "method": "POST",
+        "authType": "NONE",
+        "body_type": "json",
+        "failureMode": "continue_all",
+        "headers": {
+          "Authorization": "Bearer PLACEHOLDER_OPENAI_API_KEY",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "model": "gpt-4o-mini",
+          "temperature": 0.3,
+          "messages": [
+            {
+              "role": "system",
+              "content": "You are a RevOps analyst. Given a deal's activity log and deterministic tripwire facts, write ONE plain-English sentence for the deal owner and manager explaining whether this deal is genuinely at risk or just quiet for a benign reason (e.g. champion on leave, known slow buying cycle). Be direct and specific, referencing the activity log content."
+            },
+            {
+              "role": "user",
+              "content": "Deal: {{step_1.fields.'Deal Name'}}\nValue: {{step_1.fields.'Deal Value'}}\nTripwire facts: {{step_7.reasonsText}}\nActivity log: {{step_1.fields.'Activity Log'}}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "step_11",
+      "type": "ROUTER",
+      "displayName": "4a-ii. AI Response Status Check",
+      "parent": "step_10",
+      "relationship": "after",
+      "branches": [
+        {
+          "index": 0,
+          "name": "Success (200)",
+          "conditions": [
+            [
+              "{{step_10.response.status}} NUMBER_IS_EQUAL_TO 200"
+            ]
+          ]
+        },
+        {
+          "index": 1,
+          "name": "Otherwise"
+        }
+      ]
+    },
+    {
+      "name": "step_12",
+      "type": "PIECE",
+      "displayName": "4c. Save AI Risk Narrative",
+      "piece": "@activepieces/piece-airtable",
+      "action": "airtable_update_record",
+      "parent": "step_11",
+      "relationship": "branch_0",
+      "input": {
+        "base": "appN8qNQB9nhbkYJI",
+        "tableId": "tblmIREoNlmfY8fHy",
+        "recordId": "{{trigger.body.deal_id}}",
+        "fields": {
+          "Risk Narrative": "{{step_10.body.choices[0].message.content}}",
+          "At Risk": true
+        }
+      }
+    },
+    {
+      "name": "step_13",
+      "type": "PIECE",
+      "displayName": "4d. Save Fallback Deterministic Narrative (AI unreachable)",
+      "piece": "@activepieces/piece-airtable",
+      "action": "airtable_update_record",
+      "parent": "step_11",
+      "relationship": "branch_1_otherwise",
+      "input": {
+        "base": "appN8qNQB9nhbkYJI",
+        "tableId": "tblmIREoNlmfY8fHy",
+        "recordId": "{{trigger.body.deal_id}}",
+        "fields": {
+          "Risk Narrative": "Flagged by deterministic tripwires: {{step_7.reasonsText}}. (AI narrative unavailable -- add a real OpenAI key to get a plain-English risk summary here.)",
+          "At Risk": true
+        }
+      }
+    },
+    {
+      "name": "step_14",
+      "type": "PIECE",
+      "displayName": "5. Refetch Deal (for alert)",
+      "piece": "@activepieces/piece-airtable",
+      "action": "airtable_get_record_by_id",
+      "parent": "step_11",
+      "relationship": "after",
+      "input": {
+        "base": "appN8qNQB9nhbkYJI",
+        "tableId": "tblmIREoNlmfY8fHy",
+        "recordId": "{{trigger.body.deal_id}}"
+      }
+    },
+    {
+      "name": "step_15",
+      "type": "PIECE",
+      "displayName": "6. Alert Owner + Manager (#automations)",
+      "piece": "@activepieces/piece-slack",
+      "action": "send_channel_message",
+      "parent": "step_14",
+      "relationship": "after",
+      "input": {
+        "channel": "#automations",
+        "sendAsBot": true,
+        "text": ":warning: *Deal at risk* \u2014 {{step_14.fields.'Deal Name'}} (${{step_14.fields.'Deal Value'}})\n*Owner:* {{step_14.fields.'Owner Name'}} ({{step_14.fields.'Owner Email'}})  |  *Manager:* {{step_14.fields.'Manager Email'}}\n*Stage:* {{step_14.fields.Stage}}\n*Tripwires:* {{step_7.reasonsText}}\n*Risk narrative:* {{step_14.fields.'Risk Narrative'}}"
+      }
+    },
+    {
+      "name": "step_16",
+      "type": "PIECE",
+      "displayName": "7. Fetch Daily Brief Tracker (for At-Risk increment)",
+      "piece": "@activepieces/piece-airtable",
+      "action": "airtable_get_record_by_id",
+      "parent": "step_15",
+      "relationship": "after",
+      "input": {
+        "base": "apprhpyaCN6Dvz7hw",
+        "tableId": "tblYHgidxYRUJ9Yb5",
+        "recordId": "recWrxHffhyEWWWsP"
+      }
+    },
+    {
+      "name": "step_17",
+      "type": "CODE",
+      "displayName": "8. Compute Incremented At-Risk Count + Value",
+      "parent": "step_16",
+      "relationship": "after",
+      "sourceCode": "export const code = async (inputs) => {\n  const count = (Number(inputs.currentCount) || 0) + 1;\n  const value = (Number(inputs.currentValue) || 0) + (Number(inputs.dealValue) || 0);\n  return { count, value };\n};",
+      "input": {
+        "dealValue": "{{step_14.fields.'Deal Value'}}",
+        "currentCount": "{{step_16.fields.'Deals Flagged At Risk Count'}}",
+        "currentValue": "{{step_16.fields.'At-Risk Pipeline Value Caught'}}"
+      }
+    },
+    {
+      "name": "step_18",
+      "type": "PIECE",
+      "displayName": "9. Update At-Risk Count + Pipeline Value Caught",
+      "piece": "@activepieces/piece-airtable",
+      "action": "airtable_update_record",
+      "parent": "step_17",
+      "relationship": "after",
+      "input": {
+        "base": "apprhpyaCN6Dvz7hw",
+        "tableId": "tblYHgidxYRUJ9Yb5",
+        "recordId": "recWrxHffhyEWWWsP",
+        "fields": {
+          "Deals Flagged At Risk Count": "{{step_17.count}}",
+          "At-Risk Pipeline Value Caught": "{{step_17.value}}",
+          "Last Updated": "{{now}}"
+        }
+      }
+    }
+  ]
+}
