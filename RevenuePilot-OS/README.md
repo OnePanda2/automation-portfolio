@@ -2,7 +2,15 @@
 
 A 10-workflow B2B lead-to-cash automation system built on Activepieces, covering lead capture through customer onboarding, weekly revenue reporting, centralized error monitoring, and a natural-language revenue assistant.
 
-## Portfolio highlights
+## The problem
+
+Most B2B teams below a certain size handle lead routing, qualification, and onboarding by hand: a form submission lands in an inbox, someone eyeballs it, manually checks for duplicates, decides who should own it, and pings the rep on Slack. This works until volume grows past a few dozen leads a week, at which point it becomes inconsistent — leads get missed, duplicate records pile up, routing depends on who's paying attention, and nobody can answer "how many qualified leads did we get last week?" without opening five different tools.
+
+I spent 7 years carrying a B2B sales quota watching exactly this happen from the rep side — leads sitting unassigned, duplicate records nobody noticed, routing that depended on who happened to be free. RevenuePilot OS is the system I wished was running underneath me.
+
+## The system
+
+RevenuePilot OS automates the full lead lifecycle end to end: a lead enters the system once, and ten purpose-built workflows carry it through deduplication, enrichment, AI-assisted scoring, territory routing, notification, (on close-won) customer onboarding, and into a recurring revenue report — with a dedicated monitoring workflow watching for failures across all of it, and an on-demand assistant that can answer plain-English questions about the data.
 
 - 10 production-tested Activepieces workflows, chained into one lead-to-cash pipeline
 - AI-powered lead qualification and weekly-report narrative generation (OpenAI)
@@ -15,15 +23,20 @@ A 10-workflow B2B lead-to-cash automation system built on Activepieces, covering
 - Round-robin customer onboarding automation on Closed Won
 - Full engineering documentation: architecture, setup, schema, troubleshooting, and decisions doc
 
-## The problem
+**What it is not:** a CRM replacement. Airtable is the system of record here because it's fast to iterate on and free to run for a portfolio project — the same architecture maps cleanly onto Salesforce or HubSpot as the backing CRM (see [Future Improvements](#future-improvements)).
 
-Most B2B teams below a certain size handle lead routing, qualification, and onboarding by hand: a form submission lands in an inbox, someone eyeballs it, manually checks for duplicates, decides who should own it, and pings the rep on Slack. This works until volume grows past a few dozen leads a week, at which point it becomes inconsistent — leads get missed, duplicate records pile up, routing depends on who's paying attention, and nobody can answer "how many qualified leads did we get last week?" without opening five different tools.
+Full workflow-by-workflow breakdown, architecture diagram, and tech stack rationale below.
 
-RevenuePilot OS automates the full lead lifecycle end to end: a lead enters the system once, and ten purpose-built workflows carry it through deduplication, enrichment, AI-assisted scoring, territory routing, notification, (on close-won) customer onboarding, and into a recurring revenue report — with a dedicated monitoring workflow watching for failures across all of it, and an on-demand assistant that can answer plain-English questions about the data.
+## The output
 
-## What it is not
+Built and tested end to end as a standalone system — not yet deployed inside a live company's stack. Designed to:
 
-This is not a CRM replacement. Airtable is the system of record here because it's fast to iterate on and free to run for a portfolio project — the same architecture maps cleanly onto Salesforce or HubSpot as the backing CRM (see [Future Improvements](#future-improvements)).
+- Cut lead response time from hours to under a minute
+- Eliminate duplicate-record rework for reps
+- Give managers a live revenue view with no manual weekly data pull
+- Surface pipeline breaks before they cost a deal, not after they're discovered
+
+Real client numbers — before/after response time, hours saved, reply-rate lift — will replace this section the moment this runs against a live pipeline. That's the plan, not a hypothetical.
 
 ## Features
 
